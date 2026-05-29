@@ -18,7 +18,7 @@ Browser-based read-only dashboard for viewing historical session data from the M
 
 ## Tech Stack
 
-React 18 + Vite + TypeScript + TailwindCSS + React Router v6 + TanStack Query + Recharts
+React 18 + Vite + TypeScript + TailwindCSS + React Router v6 + TanStack Query + ECharts
 
 ## Architecture
 

@@ -9,7 +9,7 @@ This pattern sits between flat Layered Architecture and full Structured Modules.
 ## Decision Rationale
 
 - **Project type:** Read-only browser dashboard — no mutations, no offline, no local persistence
-- **Tech stack:** React 18, Vite, TypeScript, TailwindCSS, React Query, Recharts
+- **Tech stack:** React 18, Vite, TypeScript, TailwindCSS, React Query, ECharts
 - **Key factor:** Four independent pages with minimal shared logic; React Query replaces the repository/service layer; no domain models needed beyond DTOs
 
 ## Folder Structure
@@ -29,9 +29,7 @@ src/
 │   ├── LoginPage/
 │   │   └── index.tsx             ← email OTP flow + Google Sign-In
 │   ├── SessionsPage/
-│   │   └── index.tsx             ← session history list + pagination
-│   ├── SessionPage/
-│   │   ├── index.tsx             ← session detail (header + timeline + charts)
+│   │   ├── index.tsx             ← split-panel host: session list (left) + charts panel (right)
 │   │   ├── InstructionTimeline.tsx
 │   │   └── BiometricCharts.tsx
 │   └── CalibrationPage/
@@ -119,8 +117,8 @@ export async function apiFetch<T>(path: string, options?: RequestInit): Promise<
 ### Page fetching data, component rendering it
 
 ```typescript
-// src/pages/SessionPage/index.tsx  ← page owns the query
-export function SessionPage() {
+// src/pages/SessionsPage/index.tsx  ← page owns the query
+export function SessionsPage() {
   const { id } = useParams<{ id: string }>();
   const { data, isLoading } = useQuery({
     queryKey: ['session-biometrics', id],
@@ -132,16 +130,19 @@ export function SessionPage() {
   return <BiometricCharts samples={data ?? []} />;  // passes shaped props
 }
 
-// src/pages/SessionPage/BiometricCharts.tsx  ← component only renders
+// src/pages/SessionsPage/BiometricCharts.tsx  ← component only renders
 interface Props { samples: BioSampleDto[] }
 
 export function BiometricCharts({ samples }: Props) {
-  const heartRate = samples.filter(s => s.sampleType === 'heart_rate');
-  return (
-    <LineChart data={heartRate}>
-      <Line dataKey="value" stroke="#f88d8d" />
-    </LineChart>
-  );
+  const heartRate = samples
+    .filter(s => s.sampleType === 'heart_rate')
+    .map(s => ({ value: s.data.value }));
+  const option = {
+    xAxis: { type: 'category' },
+    yAxis: { type: 'value' },
+    series: [{ data: heartRate, type: 'line', color: '#f88d8d' }],
+  };
+  return <ReactECharts option={option} />;
 }
 ```
 
@@ -162,4 +163,4 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
 - ❌ **Raw localStorage access** — reading or writing `mind_auth_token` outside `core/auth/AuthContext.tsx` and `core/api/client.ts`.
 - ❌ **Inline chart data shaping** — transforming raw API responses inside JSX. Shape data in the `select` option of `useQuery` or a named transform function above the return statement.
 - ❌ **Cross-page imports** — `SessionsPage` importing a component defined inside `CalibrationPage`. Move shared components to `components/`.
-- ❌ **God page component** — a single 500-line `SessionPage`. Extract `InstructionTimeline` and `BiometricCharts` as sibling files inside `pages/SessionPage/`.
+- ❌ **God page component** — a single 500-line `SessionsPage`. Extract `InstructionTimeline` and `BiometricCharts` as sibling files inside `pages/SessionsPage/`.
