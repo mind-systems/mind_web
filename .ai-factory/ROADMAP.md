@@ -20,7 +20,7 @@
 
 - [x] **Login page: Google Sign-In** — Add "Continue with Google" button on `LoginPage`. On click: call `GET /auth/google` → API redirects browser to Google OAuth. After Google auth, API relays to `{WEB_BASE_URL}/auth/google/callback?googleCode=<code>` (success) or `?googleError=<err>` (failure). Implement `GoogleCallbackPage`: on `googleCode` → call `POST /auth/google { code, redirectUri: window.location.origin + '/auth/google/callback' }` → receive `{ accessToken, user }` → `auth.login(accessToken)`. On `googleError` → redirect to `/login?error=google`. Note: endpoint spec in mind_api Phase 21 (`.ai-factory/ROADMAP.md`). [14m 24s]
 
-- [ ] **API client with auth interceptor** — Create `src/core/api/client.ts`. `apiFetch<T>(path, options?)`: prepend `API_BASE_URL`, add `Content-Type: application/json` and `Authorization: Bearer <token>` headers. On 401: clear token, navigate to `/login`. On non-2xx: throw `ApiError(status, message)` with message extracted from response JSON. Task ends with the client used by at least one page.
+- [x] **API client with auth interceptor** — Create `src/core/api/client.ts`. `apiFetch<T>(path, options?)`: prepend `API_BASE_URL`, add `Content-Type: application/json` and `Authorization: Bearer <token>` headers. On 401: clear token, navigate to `/login`. On non-2xx: throw `ApiError(status, message)` with message extracted from response JSON. Task ends with the client used by at least one page. [6m 54s]
 
 ## Phase 3 — Sessions Split-Panel Page
 
