@@ -42,7 +42,7 @@ src/
 │   └── ErrorMessage.tsx
 │
 ├── router.tsx                    ← React Router v6 createBrowserRouter config
-└── main.tsx                      ← entry point: RouterProvider + QueryClientProvider + AuthProvider
+└── main.tsx                      ← entry point: RouterProvider + QueryClientProvider (AuthProvider is inside the router via AuthLayout)
 ```
 
 ## Dependency Rules
