@@ -42,3 +42,25 @@ export interface BioSampleDto {
   sampleType: string;
   data: Record<string, number | boolean | string>;
 }
+
+export interface NfbCalibrationRecord {
+  id: string;
+  userId: string;
+  deviceSerial: string;
+  calibratedAt: string;
+  createdAt: string;
+  isValid: boolean;
+  failReason: string | null;
+  individualFrequency: number;
+  individualPeakFrequencyPower: number;
+  individualPeakFrequencySuppression: number;
+  individualBandwidth: number;
+  individualNormalizedPower: number;
+  lowerFrequency: number;
+  upperFrequency: number;
+}
+
+export interface NfbCalibrationsResponse {
+  records: NfbCalibrationRecord[];
+  total: number;
+}
