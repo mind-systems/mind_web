@@ -1,32 +1,64 @@
 import { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import ReactECharts from 'echarts-for-react';
+import { apiFetch } from '@/core/api/client';
 import { SkeletonLoader } from '@/components/SkeletonLoader';
 import type { SessionRun, InstructionDto, BioSampleDto } from '@/core/types';
-import { formatSessionDate, formatDuration } from './format';
+import { formatDate, formatDuration } from '@/core/format';
 import { buildSessionChartOption } from './chartOption';
 
 interface SessionChartsProps {
   session: SessionRun;
-  instructions: InstructionDto[];
-  biometrics: BioSampleDto[];
-  isLoading: boolean;
-  isError: boolean;
 }
 
-export function SessionCharts({
-  session,
-  instructions,
-  biometrics,
-  isLoading,
-  isError,
-}: SessionChartsProps) {
-  const isEmpty = !isLoading && !isError && instructions.length === 0 && biometrics.length === 0;
+export function SessionCharts({ session }: SessionChartsProps) {
+  const from = encodeURIComponent(session.startedAt);
+  const to = encodeURIComponent(session.endedAt);
+
+  const {
+    data: instructionsData,
+    isLoading: instructionsLoading,
+    isError: instructionsError,
+  } = useQuery({
+    queryKey: ['session-instructions', session.id],
+    queryFn: () =>
+      apiFetch<InstructionDto[]>(
+        `/sessions/runs/${session.id}/instructions?from=${from}&to=${to}`,
+      ),
+  });
+
+  const {
+    data: biometricsData,
+    isLoading: biometricsLoading,
+    isError: biometricsError,
+  } = useQuery({
+    queryKey: ['session-biometrics', session.id],
+    queryFn: () =>
+      apiFetch<BioSampleDto[]>(
+        `/sessions/runs/${session.id}/biometrics?from=${from}&to=${to}`,
+      ),
+  });
+
+  const isLoading = instructionsLoading || biometricsLoading;
+  const isError = instructionsError || biometricsError;
+
+  const isEmpty =
+    !isLoading &&
+    !isError &&
+    (instructionsData?.length ?? 0) === 0 &&
+    (biometricsData?.length ?? 0) === 0;
 
   // Always computed — the builder handles empty arrays gracefully, and this ensures
   // height is always derived from the same grid-presence logic as the rendered option.
   const { option, height } = useMemo(
-    () => buildSessionChartOption(instructions, biometrics, session.startedAt, session.endedAt),
-    [instructions, biometrics, session.startedAt, session.endedAt],
+    () =>
+      buildSessionChartOption(
+        instructionsData ?? [],
+        biometricsData ?? [],
+        session.startedAt,
+        session.endedAt,
+      ),
+    [instructionsData, biometricsData, session.startedAt, session.endedAt],
   );
 
   return (
@@ -34,7 +66,7 @@ export function SessionCharts({
       {/* Header */}
       <div className="flex shrink-0 items-center gap-3 border-b border-gray-200 px-6 py-4">
         <span className="text-base font-semibold text-gray-900">
-          {formatSessionDate(session.startedAt)}
+          {formatDate(session.startedAt)}
         </span>
         <span className="text-sm text-gray-400">{formatDuration(session.durationSeconds)}</span>
       </div>

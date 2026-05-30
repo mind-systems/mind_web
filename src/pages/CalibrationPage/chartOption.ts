@@ -1,6 +1,6 @@
 import type { EChartsOption } from 'echarts';
 import type { NfbCalibrationRecord } from '@/core/types';
-import { formatCalibrationDate } from './format';
+import { formatDate } from '@/core/format';
 
 const VALID_COLOR = '#5BAD6F';
 const INVALID_COLOR = '#E96F6F';
@@ -32,7 +32,7 @@ function pointStyle(record: NfbCalibrationRecord) {
  * Input records must already be sorted chronologically (ascending by calibratedAt).
  */
 export function buildCalibrationChartOption(records: NfbCalibrationRecord[]): EChartsOption {
-  const categories = records.map((r) => formatCalibrationDate(r.calibratedAt));
+  const categories = records.map((r) => formatDate(r.calibratedAt));
 
   const freqData = records.map((r) => ({
     value: r.individualFrequency,
@@ -60,7 +60,7 @@ export function buildCalibrationChartOption(records: NfbCalibrationRecord[]): EC
         const record = records[dataIndex];
         if (!record) return '';
 
-        const date = formatCalibrationDate(record.calibratedAt);
+        const date = formatDate(record.calibratedAt);
         const validity = record.isValid ? '✓ Valid' : '✗ Invalid';
         const failLine =
           record.failReason != null ? `<br/>Reason: ${escapeHtml(record.failReason)}` : '';

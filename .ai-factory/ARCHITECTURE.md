@@ -64,15 +64,15 @@ core/auth   →  (no imports from other src/ folders)
 
 ## Layer Communication
 
-- **Data fetching:** pages use React Query `useQuery` hooks that call `apiFetch`. No data fetching in components.
+- **Data fetching:** pages use React Query `useQuery` hooks that call `apiFetch`. Shared components in `src/components/` never fetch data — they receive it as props. Page-local feature sub-components under `pages/<Feature>/` (e.g. `SessionCharts`) may co-locate their own `useQuery` calls for data that is solely their concern.
 - **Auth state:** pages and `ProtectedRoute` access auth via `useAuth()`. The API client reads the token from `localStorage` at call time (no React dependency).
-- **Props down:** pages pass pre-fetched data to chart/timeline sub-components as typed props. Sub-components are pure render functions.
+- **Props down:** pages pass pre-fetched data to chart/timeline sub-components as typed props. Shared components in `src/components/` are pure render functions that receive all data as props.
 
 ## Key Principles
 
 1. **Single fetch point:** All HTTP calls go through `core/api/client.ts`. This is the only place where the base URL is prepended, the auth header is injected, and 401s are handled.
 2. **Auth is a context, not a prop:** Components never receive the JWT token as a prop. They call `useAuth()` or simply render data passed down from the page.
-3. **Pages own data, components own presentation:** A page fetches and transforms data; it passes shaped data to chart/list components. Components must not know about API shapes — they receive typed view-model props.
+3. **Pages and their feature sub-components own data; shared components own presentation:** A page (and its page-local feature sub-components under `pages/<Feature>/`) fetches and transforms data. Shared components in `src/components/` must not know about API shapes — they receive typed view-model props.
 4. **No domain logic:** There are no validators, business rules, or state machines. Data arrives from `mind_api` and is displayed as-is. Transformations (unit conversion, flattening jsonb arrays) happen inside the `useQuery` `select` option, close to the fetch site.
 5. **React Query is the cache:** No Redux, no Zustand. `QueryClient` holds all server state. Local UI state (form inputs, pagination offset) lives in `useState` inside the page component.
 
@@ -159,7 +159,7 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
 
 ## Anti-Patterns
 
-- ❌ **Fetch in components** — calling `apiFetch` or `useQuery` inside a shared component. Data flows down as props; only pages initiate fetches.
+- ❌ **Fetch in shared components** — calling `apiFetch` or `useQuery` inside a component in `src/components/`. Shared components receive data as props. Page-local feature sub-components under `pages/<Feature>/` may co-locate their own queries for data that is solely their concern.
 - ❌ **Raw localStorage access** — reading or writing `mind_auth_token` outside `core/auth/AuthContext.tsx` and `core/api/client.ts`.
 - ❌ **Inline chart data shaping** — transforming raw API responses inside JSX. Shape data in the `select` option of `useQuery` or a named transform function above the return statement.
 - ❌ **Cross-page imports** — `SessionsPage` importing a component defined inside `CalibrationPage`. Move shared components to `components/`.

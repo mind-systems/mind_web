@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { SkeletonLoader } from '@/components/SkeletonLoader';
 import type { SessionRun } from '@/core/types';
-import { formatSessionDate, formatDuration } from './format';
+import { formatDate, formatDuration } from '@/core/format';
 
 interface SessionListProps {
   sessions: SessionRun[];
@@ -48,7 +48,7 @@ export function SessionList({
             ].join(' ')}
           >
             <span className="text-sm font-medium text-gray-900">
-              {formatSessionDate(session.startedAt)}
+              {formatDate(session.startedAt)}
             </span>
             <span className="mt-0.5 text-xs text-gray-400">
               {formatDuration(session.durationSeconds)}
