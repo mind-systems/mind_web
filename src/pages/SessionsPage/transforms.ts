@@ -33,17 +33,16 @@ export function parsePhases(
 }
 
 /**
- * Filters `samples` by `sampleType`, picks `data[field]` (numbers only), and
- * returns an array of `[secondsFromStart, value]` pairs.
+ * Converts pre-filtered `samples` (already scoped to a single sampleType) to
+ * `[secondsFromStart, value]` pairs. Only samples where `data[field]` is a number
+ * are included. `startMs` is the session start time in milliseconds.
  */
 export function toSeries(
   samples: BioSampleDto[],
-  sampleType: string,
   field: string,
-  startedAt: string,
+  startMs: number,
 ): [number, number][] {
   return samples
-    .filter((s) => s.sampleType === sampleType)
     .filter((s) => typeof s.data[field] === 'number')
-    .map((s) => [secFromStart(s.timestamp, startedAt), s.data[field] as number]);
+    .map((s) => [(new Date(s.timestamp).getTime() - startMs) / 1000, s.data[field] as number]);
 }

@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import ReactECharts from 'echarts-for-react';
 import { SkeletonLoader } from '@/components/SkeletonLoader';
 import type { SessionRun, InstructionDto, BioSampleDto } from '@/core/types';
@@ -23,11 +24,9 @@ export function SessionCharts({
 
   // Always computed — the builder handles empty arrays gracefully, and this ensures
   // height is always derived from the same grid-presence logic as the rendered option.
-  const { option, height } = buildSessionChartOption(
-    instructions,
-    biometrics,
-    session.startedAt,
-    session.endedAt,
+  const { option, height } = useMemo(
+    () => buildSessionChartOption(instructions, biometrics, session.startedAt, session.endedAt),
+    [instructions, biometrics, session.startedAt, session.endedAt],
   );
 
   return (

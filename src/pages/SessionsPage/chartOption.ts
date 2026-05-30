@@ -58,25 +58,40 @@ export function buildSessionChartOption(
   startedAt: string,
   endedAt: string,
 ): { option: EChartsOption; height: number } {
-  const durationSec =
-    (new Date(endedAt).getTime() - new Date(startedAt).getTime()) / 1000;
+  const startMs = new Date(startedAt).getTime();
+  const durationSec = (new Date(endedAt).getTime() - startMs) / 1000;
 
   // --- Data transforms ---
   const phases = parsePhases(instructions, startedAt, endedAt);
 
-  const heartRateSeries = toSeries(biometrics, 'cardio', 'heartRate', startedAt);
+  // Partition biometrics by sampleType in a single pass.
+  const byType = new Map<string, BioSampleDto[]>();
+  for (const s of biometrics) {
+    let bucket = byType.get(s.sampleType);
+    if (!bucket) {
+      bucket = [];
+      byType.set(s.sampleType, bucket);
+    }
+    bucket.push(s);
+  }
 
-  const deltaSeries = toSeries(biometrics, 'nfb', 'delta', startedAt);
-  const thetaSeries = toSeries(biometrics, 'nfb', 'theta', startedAt);
-  const alphaSeries = toSeries(biometrics, 'nfb', 'alpha', startedAt);
-  const smrSeries = toSeries(biometrics, 'nfb', 'smr', startedAt);
-  const betaSeries = toSeries(biometrics, 'nfb', 'beta', startedAt);
+  const cardio = byType.get('cardio') ?? [];
+  const nfb = byType.get('nfb') ?? [];
+  const emotions = byType.get('emotions') ?? [];
 
-  const attentionSeries = toSeries(biometrics, 'emotions', 'attention', startedAt);
-  const relaxationSeries = toSeries(biometrics, 'emotions', 'relaxation', startedAt);
-  const cogLoadSeries = toSeries(biometrics, 'emotions', 'cognitiveLoad', startedAt);
-  const cogCtrlSeries = toSeries(biometrics, 'emotions', 'cognitiveControl', startedAt);
-  const selfCtrlSeries = toSeries(biometrics, 'emotions', 'selfControl', startedAt);
+  const heartRateSeries = toSeries(cardio, 'heartRate', startMs);
+
+  const deltaSeries = toSeries(nfb, 'delta', startMs);
+  const thetaSeries = toSeries(nfb, 'theta', startMs);
+  const alphaSeries = toSeries(nfb, 'alpha', startMs);
+  const smrSeries = toSeries(nfb, 'smr', startMs);
+  const betaSeries = toSeries(nfb, 'beta', startMs);
+
+  const attentionSeries = toSeries(emotions, 'attention', startMs);
+  const relaxationSeries = toSeries(emotions, 'relaxation', startMs);
+  const cogLoadSeries = toSeries(emotions, 'cognitiveLoad', startMs);
+  const cogCtrlSeries = toSeries(emotions, 'cognitiveControl', startMs);
+  const selfCtrlSeries = toSeries(emotions, 'selfControl', startMs);
 
   // --- Presence flags ---
   const hasHeartRate = heartRateSeries.length > 0;
@@ -252,7 +267,6 @@ export function buildSessionChartOption(
       : []),
   ];
 
-  const allXAxisIndices = Array.from({ length: totalGrids }, (_, i) => i);
   // currentTop = TOP + Σ(gridHeight + GAP); strip the trailing gap and add 60 for dataZoom.
   const height = currentTop - GAP + 60;
 
@@ -274,13 +288,13 @@ export function buildSessionChartOption(
     dataZoom: [
       {
         type: 'inside' as const,
-        xAxisIndex: allXAxisIndices,
+        xAxisIndex: 'all' as const,
         start: 0,
         end: 100,
       },
       {
         type: 'slider' as const,
-        xAxisIndex: allXAxisIndices,
+        xAxisIndex: 'all' as const,
         bottom: 10,
         height: 30,
         start: 0,
