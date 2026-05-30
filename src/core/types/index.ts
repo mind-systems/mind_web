@@ -7,3 +7,15 @@ export interface AuthResponse {
   accessToken: string;
   user: User;
 }
+
+export interface SessionRun {
+  id: string;
+  startedAt: string;
+  endedAt: string;
+  durationSeconds: number;
+}
+
+export interface ListRunsResponse {
+  items: SessionRun[];
+  total: number;
+}
