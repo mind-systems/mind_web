@@ -26,7 +26,7 @@
 
 Single page at `/sessions` (and `/sessions/:id` for selected state). Left column: session list. Right panel: session charts. Selecting a session updates the URL to `/sessions/:id` and populates the right panel — no page navigation.
 
-- [ ] **Split-panel layout shell** — Implement `SessionsPage` with a two-column layout: left column fixed-width (~280px), right panel fills remaining width. Left column header: "Sessions" title + logout button. Right panel: empty state ("Select a session") when no session selected. Use TailwindCSS `flex h-screen overflow-hidden`. Left column is scrollable independently. Right panel is scrollable independently.
+- [x] **Split-panel layout shell** — Implement `SessionsPage` with a two-column layout: left column fixed-width (~280px), right panel fills remaining width. Left column header: "Sessions" title + logout button. Right panel: empty state ("Select a session") when no session selected. Use TailwindCSS `flex h-screen overflow-hidden`. Left column is scrollable independently. Right panel is scrollable independently. [3m 30s]
 
 - [ ] **Session list (left column)** — Fetch `GET /sessions/runs` via React Query. Render a scrollable list of session rows: date (`DD MMM, HH:mm`) + duration (`mm:ss`). Selected session highlighted. Clicking a row navigates to `/sessions/:id` (via React Router, no reload). "Load more" at the bottom loads next page. Skeleton loader while fetching. "No sessions yet" empty state.
 
