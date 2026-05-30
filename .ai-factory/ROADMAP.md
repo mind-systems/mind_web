@@ -2,7 +2,7 @@
 
 ## Phase 1 — Project Bootstrap
 
-- [ ] **Scaffold Vite + React + TypeScript project** — Bootstrap the empty repo with Vite + React + TypeScript; install runtime deps (`react-router-dom`, `@tanstack/react-query`, `echarts`, `echarts-for-react`); strip generated boilerplate. Full spec and constraints in `notes/02-scaffold-vite-react-typescript-project.md`. Task ends when `npm run dev` starts a blank page with no console errors.
+- [x] **Scaffold Vite + React + TypeScript project** — Bootstrap the empty repo with Vite + React + TypeScript; install runtime deps (`react-router-dom`, `@tanstack/react-query`, `echarts`, `echarts-for-react`); strip generated boilerplate. Full spec and constraints in `notes/02-scaffold-vite-react-typescript-project.md`. Task ends when `npm run dev` starts a blank page with no console errors. [28m 12s]
 
 - [ ] **Configure TailwindCSS** — Install `tailwindcss@3 postcss autoprefixer` as dev deps (pin to v3 — bare `tailwindcss` resolves v4 which has incompatible setup). Run `npx tailwindcss init -p`. Set `content: ["./index.html", "./src/**/*.{ts,tsx}"]` in `tailwind.config.js`. Add three separate directives to the top of `src/index.css`: `@tailwind base;`, `@tailwind components;`, `@tailwind utilities;`. Replace `index.html` title with `Mind`. Full setup spec and v3 vs v4 gotchas: `notes/03-tailwindcss-v3-setup.md`. Task ends when a `className="text-blue-500"` element renders in the correct color.
 

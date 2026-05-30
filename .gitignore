@@ -26,3 +26,9 @@ logs/
 # Misc
 *.tmp
 *.bak
+
+# Vite
+dist-ssr
+*.local
+*.tsbuildinfo
+node_modules/.cache
