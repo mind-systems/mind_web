@@ -48,6 +48,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     localStorage.removeItem(TOKEN_KEY);
     setToken(null);
+    localStorage.removeItem(PENDING_EMAIL_KEY);
+    setPendingEmailState(null);
     navigate('/login', { replace: true });
   }, [navigate]);
 

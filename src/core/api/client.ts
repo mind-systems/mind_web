@@ -31,6 +31,7 @@ export async function apiFetch<T>(path: string, options?: RequestInit): Promise<
     if (res.status === 401 && token) {
       localStorage.removeItem(TOKEN_KEY);
       window.location.assign('/login');
+      return new Promise<T>(() => {});
     }
 
     throw new ApiError(res.status, msg);
