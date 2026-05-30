@@ -16,8 +16,8 @@ export function GoogleCallbackPage() {
     if (didExchange.current) return;
     didExchange.current = true;
 
-    const code = searchParams.get('code');
-    const error = searchParams.get('error');
+    const code = searchParams.get('googleCode');
+    const error = searchParams.get('googleError');
 
     if (error || !code) {
       navigate('/login?error=google', { replace: true });
