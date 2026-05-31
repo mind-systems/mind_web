@@ -45,7 +45,7 @@ export function CalibrationPage() {
 
   return (
     <div className="flex h-screen flex-col overflow-hidden">
-      <PageHeader title="Calibrations" />
+      <PageHeader />
 
       {/* Body */}
       <div className="flex-1 overflow-y-auto">

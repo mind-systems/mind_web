@@ -42,35 +42,39 @@ export function SessionsPage() {
       : undefined;
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      {/* Left column */}
-      <div className="flex w-[280px] shrink-0 flex-col border-r border-gray-200">
-        <PageHeader title="Sessions" />
-        <ModuleFilter value={filter} onChange={setFilter} />
-        <div className="flex-1 overflow-y-auto">
-          <SessionList
-            sessions={visibleSessions}
-            selectedId={id}
-            isLoading={isLoading}
-            isFetchingNextPage={isFetchingNextPage}
-            hasNextPage={hasNextPage}
-            onLoadMore={() => fetchNextPage()}
-            emptyMessage={emptyMessage}
-          />
-        </div>
-      </div>
+    <div className="flex h-screen flex-col overflow-hidden">
+      <PageHeader />
 
-      {/* Right panel */}
-      <div className="flex-1 overflow-y-auto">
-        {selectedSession ? (
-          <SessionCharts session={selectedSession} />
-        ) : (
-          <div className="flex h-full items-center justify-center">
-            <span className="text-gray-400">
-              {id && isLoading ? 'Loading…' : 'Select a session'}
-            </span>
+      {/* Content row */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Left column */}
+        <div className="flex w-[280px] shrink-0 flex-col border-r border-gray-200">
+          <ModuleFilter value={filter} onChange={setFilter} />
+          <div className="flex-1 overflow-y-auto">
+            <SessionList
+              sessions={visibleSessions}
+              selectedId={id}
+              isLoading={isLoading}
+              isFetchingNextPage={isFetchingNextPage}
+              hasNextPage={hasNextPage}
+              onLoadMore={() => fetchNextPage()}
+              emptyMessage={emptyMessage}
+            />
           </div>
-        )}
+        </div>
+
+        {/* Right panel */}
+        <div className="flex-1 overflow-y-auto">
+          {selectedSession ? (
+            <SessionCharts session={selectedSession} />
+          ) : (
+            <div className="flex h-full items-center justify-center">
+              <span className="text-gray-400">
+                {id && isLoading ? 'Loading…' : 'Select a session'}
+              </span>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
