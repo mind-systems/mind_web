@@ -30,7 +30,7 @@ export function SessionList({
 
   if (sessions.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center gap-2 p-6">
+      <div className="flex h-full flex-col items-center justify-center gap-2 p-6">
         <span className="text-sm text-gray-400">{emptyMessage ?? 'No sessions yet'}</span>
         {hasNextPage && (
           <button
