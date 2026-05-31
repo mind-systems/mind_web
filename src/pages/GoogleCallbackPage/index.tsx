@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { apiFetch } from '@/core/api/client';
 import { useAuth } from '@/core/auth/AuthContext';
+import { consumeOAuthState } from '@/core/auth/oauthState';
 import type { AuthResponse } from '@/core/types';
 
 export function GoogleCallbackPage() {
@@ -13,8 +14,18 @@ export function GoogleCallbackPage() {
   useEffect(() => {
     // Guard against React 18 StrictMode double-invocation.
     // The OAuth code is single-use, so a duplicate exchange call would fail.
+    // State is also consumed here (one-time read) rather than outside the guard,
+    // so the double-invoke in StrictMode does not consume it before the real call.
     if (didExchange.current) return;
     didExchange.current = true;
+
+    // CSRF state validation: the value must match what was stored before the redirect.
+    const returnedState = searchParams.get('state');
+    const storedState = consumeOAuthState();
+    if (!returnedState || !storedState || returnedState !== storedState) {
+      navigate('/login?error=google', { replace: true });
+      return;
+    }
 
     const code = searchParams.get('googleCode');
     const error = searchParams.get('googleError');
@@ -29,6 +40,7 @@ export function GoogleCallbackPage() {
       body: JSON.stringify({
         code,
         redirectUri: window.location.origin + '/auth/google/callback',
+        state: returnedState,
       }),
     })
       .then(res => {

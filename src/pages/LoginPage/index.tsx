@@ -2,6 +2,7 @@ import { type FormEvent, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { apiFetch, ApiError } from '@/core/api/client';
 import { useAuth } from '@/core/auth/AuthContext';
+import { createOAuthState } from '@/core/auth/oauthState';
 import { API_BASE_URL } from '@/core/config';
 import type { AuthResponse } from '@/core/types';
 
@@ -71,7 +72,8 @@ export function LoginPage() {
   }
 
   function handleGoogleSignIn() {
-    window.location.href = `${API_BASE_URL}/auth/google`;
+    const state = createOAuthState();
+    window.location.href = `${API_BASE_URL}/auth/google?state=${encodeURIComponent(state)}`;
   }
 
   return (

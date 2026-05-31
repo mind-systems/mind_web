@@ -57,7 +57,7 @@ JWT stored in `localStorage` under `mind_auth_token`. All API requests include `
 - `mind_auth_token` — do not rename this localStorage key
 - Never write to `mind_api` proto files — proto ownership is in `mind_api/proto/`
 - All HTTP calls go through `core/api/client.ts` — no raw `fetch` in pages or components
-- `localStorage` access only in `core/auth/AuthContext.tsx` and `core/api/client.ts`
+- Browser storage (`localStorage`/`sessionStorage`) access only in `core/auth/AuthContext.tsx`, `core/api/client.ts`, and `core/auth/oauthState.ts` — no direct storage reads/writes anywhere else
 - Components receive data as props from pages — no `useQuery` inside shared components
 
 ## AI Context
