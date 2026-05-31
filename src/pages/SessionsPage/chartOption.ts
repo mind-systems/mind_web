@@ -46,10 +46,10 @@ function buildLineSeriesEntry(
 
 /**
  * Builds a fully self-contained EChartsOption and the matching canvas height for a session
- * detail panel. Up to four vertically-stacked grids are included (instruction phases always;
- * heart rate, EEG bands, and emotions only when their sample data is non-empty). Grid
- * presence is derived from the same toSeries calls that feed the option, so `height` is
- * always consistent with the rendered layout.
+ * detail panel. Up to four vertically-stacked grids are included — instruction phases only
+ * when phase data is non-empty, heart rate, EEG bands, and emotions only when their sample
+ * data is non-empty. Grid presence is derived from the same toSeries/parsePhases calls that
+ * feed the option, so `height` is always consistent with the rendered layout.
  * All X-axes are value-based and linked via dataZoom.
  */
 export function buildSessionChartOption(
@@ -94,6 +94,7 @@ export function buildSessionChartOption(
   const selfCtrlSeries = toSeries(emotions, 'selfControl', startMs);
 
   // --- Presence flags ---
+  const hasPhases = phases.length > 0;
   const hasHeartRate = heartRateSeries.length > 0;
   const hasEeg =
     deltaSeries.length > 0 ||
@@ -109,10 +110,10 @@ export function buildSessionChartOption(
     selfCtrlSeries.length > 0;
 
   // --- Dynamic grid index assignment ---
-  // INSTRUCTION_GRID is always index 0.
+  // INSTRUCTION_GRID is index 0 when phase data is present, otherwise omitted.
   // Each optional grid occupies the next available index.
   let nextIdx = 0;
-  const INSTRUCTION_GRID = nextIdx++;
+  const INSTRUCTION_GRID = hasPhases ? nextIdx++ : undefined;
   const HR_GRID = hasHeartRate ? nextIdx++ : undefined;
   const EEG_GRID = hasEeg ? nextIdx++ : undefined;
   const EMOT_GRID = hasEmotions ? nextIdx++ : undefined;
@@ -120,7 +121,7 @@ export function buildSessionChartOption(
 
   // --- Grid top-position computation ---
   const gridHeights = [
-    INSTRUCTION_HEIGHT,
+    ...(hasPhases ? [INSTRUCTION_HEIGHT] : []),
     ...(hasHeartRate ? [DATA_HEIGHT] : []),
     ...(hasEeg ? [DATA_HEIGHT] : []),
     ...(hasEmotions ? [DATA_HEIGHT] : []),
@@ -158,14 +159,18 @@ export function buildSessionChartOption(
 
   // --- Y-axes (1:1 correspondence with grids) ---
   const yAxes = [
-    // Instruction grid — hidden, 0-1 scale for renderItem anchoring
-    {
-      type: 'value' as const,
-      gridIndex: INSTRUCTION_GRID,
-      min: 0,
-      max: 1,
-      show: false,
-    },
+    // Instruction grid — hidden, 0-1 scale for renderItem anchoring (only when phases exist)
+    ...(INSTRUCTION_GRID !== undefined
+      ? [
+          {
+            type: 'value' as const,
+            gridIndex: INSTRUCTION_GRID,
+            min: 0,
+            max: 1,
+            show: false,
+          },
+        ]
+      : []),
     ...(HR_GRID !== undefined
       ? [
           {
@@ -210,40 +215,44 @@ export function buildSessionChartOption(
   // --- Series ---
   // Phase bars — custom series filling the full instruction-grid height.
   // Each item carries its own itemStyle.color so api.style() picks it up.
-  const phaseSeries = {
-    type: 'custom' as const,
-    xAxisIndex: INSTRUCTION_GRID,
-    yAxisIndex: INSTRUCTION_GRID,
-    renderItem: (_params: unknown, api: RenderItemAPI) => {
-      const startSec = api.value(0);
-      const endSec = api.value(1);
-      // coord maps [dataSec, dataY] → [pixelX, pixelY].
-      // Y=1 is the top of the instruction grid, Y=0 is the bottom.
-      const topLeft = api.coord([startSec, 1]);
-      const bottomRight = api.coord([endSec, 0]);
-      return {
-        type: 'rect',
-        shape: {
-          x: topLeft[0],
-          y: topLeft[1],
-          width: Math.max(bottomRight[0] - topLeft[0], 1),
-          height: Math.max(bottomRight[1] - topLeft[1], 1),
-        },
-        style: api.style(),
-        z2: 0,
-      };
-    },
-    data: phases.map((p) => ({
-      value: [p.startSec, p.endSec],
-      itemStyle: { color: PHASE_COLORS[p.phase] ?? '#ccc' },
-    })),
-    z: 2,
-    // Suppress phase bars from the axis tooltip — start/end seconds are meaningless there.
-    tooltip: { show: false },
-  };
+  // Only emitted when phase data is present (INSTRUCTION_GRID is defined).
+  const phaseSeries =
+    INSTRUCTION_GRID !== undefined
+      ? {
+          type: 'custom' as const,
+          xAxisIndex: INSTRUCTION_GRID,
+          yAxisIndex: INSTRUCTION_GRID,
+          renderItem: (_params: unknown, api: RenderItemAPI) => {
+            const startSec = api.value(0);
+            const endSec = api.value(1);
+            // coord maps [dataSec, dataY] → [pixelX, pixelY].
+            // Y=1 is the top of the instruction grid, Y=0 is the bottom.
+            const topLeft = api.coord([startSec, 1]);
+            const bottomRight = api.coord([endSec, 0]);
+            return {
+              type: 'rect',
+              shape: {
+                x: topLeft[0],
+                y: topLeft[1],
+                width: Math.max(bottomRight[0] - topLeft[0], 1),
+                height: Math.max(bottomRight[1] - topLeft[1], 1),
+              },
+              style: api.style(),
+              z2: 0,
+            };
+          },
+          data: phases.map((p) => ({
+            value: [p.startSec, p.endSec],
+            itemStyle: { color: PHASE_COLORS[p.phase] ?? '#ccc' },
+          })),
+          z: 2,
+          // Suppress phase bars from the axis tooltip — start/end seconds are meaningless there.
+          tooltip: { show: false },
+        }
+      : null;
 
   const allSeries = [
-    phaseSeries,
+    ...(phaseSeries != null ? [phaseSeries] : []),
     ...(HR_GRID !== undefined
       ? [buildLineSeriesEntry(HR_GRID, heartRateSeries, 'Heart Rate', '#f88d8d')]
       : []),

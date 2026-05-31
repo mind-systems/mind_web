@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import ReactECharts from 'echarts-for-react';
 import { apiFetch } from '@/core/api/client';
+import { ModuleBadge } from '@/components/ModuleBadge';
 import { SkeletonLoader } from '@/components/SkeletonLoader';
 import type { SessionRun, InstructionDto, BioSampleDto } from '@/core/types';
 import { formatDate, formatDuration } from '@/core/format';
@@ -65,10 +66,17 @@ export function SessionCharts({ session }: SessionChartsProps) {
     <div className="flex h-full flex-col">
       {/* Header */}
       <div className="flex shrink-0 items-center gap-3 border-b border-gray-200 px-6 py-4">
-        <span className="text-base font-semibold text-gray-900">
-          {formatDate(session.startedAt)}
+        <ModuleBadge type={session.activityType} />
+        <span className="min-w-0 truncate text-base font-semibold text-gray-900">
+          {session.description ?? 'Meditation'}
         </span>
-        <span className="text-sm text-gray-400">{formatDuration(session.durationSeconds)}</span>
+        <span className="shrink-0 text-sm text-gray-400">{formatDate(session.startedAt)}</span>
+        <span className="shrink-0 text-sm text-gray-400">{formatDuration(session.durationSeconds)}</span>
+        {session.activityType === 'breath' && session.complexity != null && (
+          <span className="shrink-0 text-sm text-gray-400">
+            · Difficulty {session.complexity.toFixed(1)}
+          </span>
+        )}
       </div>
 
       {/* Body */}
