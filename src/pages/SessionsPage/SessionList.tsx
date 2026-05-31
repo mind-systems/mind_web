@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { SkeletonLoader } from '@/components/SkeletonLoader';
+import { ModuleBadge } from '@/components/ModuleBadge';
 import type { SessionRun } from '@/core/types';
 import { formatDate, formatDuration } from '@/core/format';
 
@@ -47,11 +48,19 @@ export function SessionList({
                 : 'border-transparent hover:bg-gray-50',
             ].join(' ')}
           >
-            <span className="text-sm font-medium text-gray-900">
-              {formatDate(session.startedAt)}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="min-w-0 truncate text-sm font-medium text-gray-900">
+                {session.description ?? (session.activityType === 'breath' ? 'Breath' : 'Meditation')}
+              </span>
+              <span className="shrink-0">
+                <ModuleBadge type={session.activityType} />
+              </span>
+            </div>
             <span className="mt-0.5 text-xs text-gray-400">
-              {formatDuration(session.durationSeconds)}
+              {formatDate(session.startedAt)} · {formatDuration(session.durationSeconds)}
+              {session.activityType === 'breath' && session.complexity != null
+                ? ` · Difficulty ${session.complexity.toFixed(1)}`
+                : null}
             </span>
           </Link>
         );

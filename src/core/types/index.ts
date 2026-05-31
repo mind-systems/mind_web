@@ -8,11 +8,16 @@ export interface AuthResponse {
   user: User;
 }
 
+export type ActivityType = 'breath' | 'meditation';
+
 export interface SessionRun {
   id: string;
   startedAt: string;
   endedAt: string;
   durationSeconds: number;
+  activityType: ActivityType;
+  description: string | null;
+  complexity: number | null;
 }
 
 export interface ListRunsResponse {
