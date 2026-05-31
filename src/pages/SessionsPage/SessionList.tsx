@@ -11,6 +11,7 @@ interface SessionListProps {
   isFetchingNextPage: boolean;
   hasNextPage: boolean;
   onLoadMore: () => void;
+  emptyMessage?: string;
 }
 
 export function SessionList({
@@ -20,6 +21,7 @@ export function SessionList({
   isFetchingNextPage,
   hasNextPage,
   onLoadMore,
+  emptyMessage,
 }: SessionListProps) {
   if (isLoading) {
     return <SkeletonLoader rows={6} />;
@@ -27,8 +29,18 @@ export function SessionList({
 
   if (sessions.length === 0) {
     return (
-      <div className="flex h-full items-center justify-center p-6">
-        <span className="text-sm text-gray-400">No sessions yet</span>
+      <div className="flex flex-col items-center justify-center gap-2 p-6">
+        <span className="text-sm text-gray-400">{emptyMessage ?? 'No sessions yet'}</span>
+        {hasNextPage && (
+          <button
+            type="button"
+            onClick={onLoadMore}
+            disabled={isFetchingNextPage}
+            className="w-full py-3 text-sm text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+          >
+            {isFetchingNextPage ? 'Loading…' : 'Load more'}
+          </button>
+        )}
       </div>
     );
   }
