@@ -7,6 +7,7 @@ import { SkeletonLoader } from '@/components/SkeletonLoader';
 import type { SessionRun, InstructionDto, BioSampleDto } from '@/core/types';
 import { formatDate, formatDuration } from '@/core/format';
 import { buildSessionChartOption } from './chartOption';
+import { sessionTitle } from './sessionTitle';
 
 interface SessionChartsProps {
   session: SessionRun;
@@ -43,15 +44,9 @@ export function SessionCharts({ session }: SessionChartsProps) {
   const isLoading = instructionsLoading || biometricsLoading;
   const isError = instructionsError || biometricsError;
 
-  const isEmpty =
-    !isLoading &&
-    !isError &&
-    (instructionsData?.length ?? 0) === 0 &&
-    (biometricsData?.length ?? 0) === 0;
-
   // Always computed — the builder handles empty arrays gracefully, and this ensures
-  // height is always derived from the same grid-presence logic as the rendered option.
-  const { option, height } = useMemo(
+  // height and gridCount are always derived from the same grid-presence logic as the rendered option.
+  const { option, height, gridCount } = useMemo(
     () =>
       buildSessionChartOption(
         instructionsData ?? [],
@@ -62,13 +57,18 @@ export function SessionCharts({ session }: SessionChartsProps) {
     [instructionsData, biometricsData, session.startedAt, session.endedAt],
   );
 
+  // Keying isEmpty off gridCount rather than raw array lengths correctly handles sessions
+  // that have instructions but no renderable grids (e.g. meditation without a BCI device —
+  // instructions are session_event type, so no breath phases and no biometrics → gridCount === 0).
+  const isEmpty = !isLoading && !isError && gridCount === 0;
+
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
       <div className="flex shrink-0 items-center gap-3 border-b border-gray-200 px-6 py-4">
         <ModuleBadge type={session.activityType} />
         <span className="min-w-0 truncate text-base font-semibold text-gray-900">
-          {session.description ?? 'Meditation'}
+          {sessionTitle(session)}
         </span>
         <span className="shrink-0 text-sm text-gray-400">{formatDate(session.startedAt)}</span>
         <span className="shrink-0 text-sm text-gray-400">{formatDuration(session.durationSeconds)}</span>

@@ -51,13 +51,15 @@ function buildLineSeriesEntry(
  * data is non-empty. Grid presence is derived from the same toSeries/parsePhases calls that
  * feed the option, so `height` is always consistent with the rendered layout.
  * All X-axes are value-based and linked via dataZoom.
+ * Returns `gridCount` — the number of grids that will be rendered — so callers can detect
+ * when nothing is renderable (gridCount === 0) and show an empty state instead of the chart.
  */
 export function buildSessionChartOption(
   instructions: InstructionDto[],
   biometrics: BioSampleDto[],
   startedAt: string,
   endedAt: string,
-): { option: EChartsOption; height: number } {
+): { option: EChartsOption; height: number; gridCount: number } {
   const startMs = new Date(startedAt).getTime();
   const durationSec = (new Date(endedAt).getTime() - startMs) / 1000;
 
@@ -312,5 +314,5 @@ export function buildSessionChartOption(
     ],
   };
 
-  return { option, height };
+  return { option, height, gridCount: totalGrids };
 }

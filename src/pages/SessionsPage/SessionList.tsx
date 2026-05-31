@@ -3,6 +3,7 @@ import { SkeletonLoader } from '@/components/SkeletonLoader';
 import { ModuleBadge } from '@/components/ModuleBadge';
 import type { SessionRun } from '@/core/types';
 import { formatDate, formatDuration } from '@/core/format';
+import { sessionTitle } from './sessionTitle';
 
 interface SessionListProps {
   sessions: SessionRun[];
@@ -62,7 +63,7 @@ export function SessionList({
           >
             <div className="flex items-center gap-2">
               <span className="min-w-0 truncate text-sm font-medium text-gray-900">
-                {session.description ?? (session.activityType === 'breath' ? 'Breath' : 'Meditation')}
+                {sessionTitle(session)}
               </span>
               <span className="shrink-0">
                 <ModuleBadge type={session.activityType} />
