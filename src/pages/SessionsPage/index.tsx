@@ -36,9 +36,12 @@ export function SessionsPage() {
   // selectedSession will be undefined until that page is scrolled into view.
   const selectedSession = id ? sessions.find((s) => s.id === id) : undefined;
 
+  const moduleLabel = filter === 'breath' ? 'Breath' : 'Meditation';
   const emptyMessage =
     filter !== 'all' && sessions.length > 0 && visibleSessions.length === 0
-      ? `No ${filter === 'breath' ? 'Breath' : 'Meditation'} sessions`
+      ? (hasNextPage
+          ? `No ${moduleLabel} sessions loaded yet — load more below`
+          : `No ${moduleLabel} sessions`)
       : undefined;
 
   return (
