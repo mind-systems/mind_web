@@ -27,8 +27,8 @@ export function GoogleCallbackPage() {
       return;
     }
 
-    const code = searchParams.get('googleCode');
-    const error = searchParams.get('googleError');
+    const code = searchParams.get('code');
+    const error = searchParams.get('error');
 
     if (error || !code) {
       navigate('/login?error=google', { replace: true });
@@ -52,10 +52,10 @@ export function GoogleCallbackPage() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div className="flex h-screen items-center justify-center bg-gray-50 px-4">
-      <div className="flex w-full max-w-[400px] flex-col items-center gap-4 rounded-2xl bg-white p-8 shadow-md">
+    <div className="flex h-screen items-center justify-center bg-gray-50 px-4 dark:bg-gray-950">
+      <div className="flex w-full max-w-[400px] flex-col items-center gap-4 rounded-2xl bg-white p-8 shadow-md dark:bg-gray-900 dark:shadow-gray-900/50">
         <span className="h-8 w-8 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
-        <p className="text-sm text-gray-600">Completing Google sign-in…</p>
+        <p className="text-sm text-gray-600 dark:text-gray-400">Completing Google sign-in…</p>
       </div>
     </div>
   );

@@ -62,10 +62,10 @@ export function MagicLinkPage() {
 
   if (status === 'verifying') {
     return (
-      <div className="flex h-screen items-center justify-center bg-gray-50 px-4">
-        <div className="flex w-full max-w-[400px] flex-col items-center gap-4 rounded-2xl bg-white p-8 shadow-md">
+      <div className="flex h-screen items-center justify-center bg-gray-50 px-4 dark:bg-gray-950">
+        <div className="flex w-full max-w-[400px] flex-col items-center gap-4 rounded-2xl bg-white p-8 shadow-md dark:bg-gray-900 dark:shadow-gray-900/50">
           <span className="h-8 w-8 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
-          <p className="text-sm text-gray-600">Verifying magic link…</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">Verifying magic link…</p>
         </div>
       </div>
     );
@@ -73,15 +73,15 @@ export function MagicLinkPage() {
 
   if (status === 'need-email') {
     return (
-      <div className="flex h-screen items-center justify-center bg-gray-50 px-4">
-        <div className="w-full max-w-[400px] rounded-2xl bg-white p-8 shadow-md">
+      <div className="flex h-screen items-center justify-center bg-gray-50 px-4 dark:bg-gray-950">
+        <div className="w-full max-w-[400px] rounded-2xl bg-white p-8 shadow-md dark:bg-gray-900 dark:shadow-gray-900/50">
           <form onSubmit={handleSubmit} noValidate>
-            <h1 className="mb-2 text-xl font-semibold text-gray-900">Confirm your email</h1>
-            <p className="mb-6 text-sm text-gray-500">
+            <h1 className="mb-2 text-xl font-semibold text-gray-900 dark:text-gray-100">Confirm your email</h1>
+            <p className="mb-6 text-sm text-gray-500 dark:text-gray-400">
               Enter the email address you used to request this magic link.
             </p>
 
-            <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="email">
+            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300" htmlFor="email">
               Email
             </label>
             <input
@@ -91,7 +91,7 @@ export function MagicLinkPage() {
               required
               value={emailInput}
               onChange={e => setEmailInput(e.target.value)}
-              className="mb-4 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
+              className="mb-4 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-500"
               disabled={loading}
               placeholder="you@example.com"
             />
@@ -115,8 +115,8 @@ export function MagicLinkPage() {
   }
 
   return (
-    <div className="flex h-screen items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-[400px] rounded-2xl bg-white p-8 shadow-md text-center">
+    <div className="flex h-screen items-center justify-center bg-gray-50 px-4 dark:bg-gray-950">
+      <div className="w-full max-w-[400px] rounded-2xl bg-white p-8 shadow-md text-center dark:bg-gray-900 dark:shadow-gray-900/50">
         <p className="mb-4 text-sm text-red-600">{error ?? 'Something went wrong.'}</p>
         <Link to="/login" className="text-sm text-blue-600 hover:underline">
           Back to sign in

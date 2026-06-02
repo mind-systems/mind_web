@@ -31,13 +31,13 @@ export function SessionList({
   if (sessions.length === 0) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-2 p-6">
-        <span className="text-sm text-gray-400">{emptyMessage ?? 'No sessions yet'}</span>
+        <span className="text-sm text-gray-400 dark:text-gray-500">{emptyMessage ?? 'No sessions yet'}</span>
         {hasNextPage && (
           <button
             type="button"
             onClick={onLoadMore}
             disabled={isFetchingNextPage}
-            className="w-full py-3 text-sm text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+            className="w-full py-3 text-sm text-gray-500 hover:bg-gray-50 disabled:opacity-50 dark:text-gray-400 dark:hover:bg-gray-900"
           >
             {isFetchingNextPage ? 'Loading…' : 'Load more'}
           </button>
@@ -57,19 +57,19 @@ export function SessionList({
             className={[
               'flex flex-col border-l-2 px-4 py-3 transition-colors',
               isSelected
-                ? 'border-blue-500 bg-gray-100'
-                : 'border-transparent hover:bg-gray-50',
+                ? 'border-blue-500 bg-gray-100 dark:bg-gray-800'
+                : 'border-transparent hover:bg-gray-50 dark:hover:bg-gray-900',
             ].join(' ')}
           >
             <div className="flex items-center gap-2">
-              <span className="min-w-0 truncate text-sm font-medium text-gray-900">
+              <span className="min-w-0 truncate text-sm font-medium text-gray-900 dark:text-gray-100">
                 {sessionTitle(session)}
               </span>
               <span className="shrink-0">
                 <ModuleBadge type={session.activityType} />
               </span>
             </div>
-            <span className="mt-0.5 text-xs text-gray-400">
+            <span className="mt-0.5 text-xs text-gray-400 dark:text-gray-500">
               {formatDate(session.startedAt)} · {formatDuration(session.durationSeconds)}
               {session.activityType === 'breath' && session.complexity != null
                 ? ` · Difficulty ${session.complexity.toFixed(1)}`
@@ -84,7 +84,7 @@ export function SessionList({
           type="button"
           onClick={onLoadMore}
           disabled={isFetchingNextPage}
-          className="w-full py-3 text-sm text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+          className="w-full py-3 text-sm text-gray-500 hover:bg-gray-50 disabled:opacity-50 dark:text-gray-400 dark:hover:bg-gray-900"
         >
           {isFetchingNextPage ? 'Loading…' : 'Load more'}
         </button>

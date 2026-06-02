@@ -65,15 +65,15 @@ export function SessionCharts({ session }: SessionChartsProps) {
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
-      <div className="flex shrink-0 items-center gap-3 border-b border-gray-200 px-6 py-4">
+      <div className="flex shrink-0 items-center gap-3 border-b border-gray-200 bg-white px-6 py-4 dark:border-gray-700 dark:bg-gray-900">
         <ModuleBadge type={session.activityType} />
-        <span className="min-w-0 truncate text-base font-semibold text-gray-900">
+        <span className="min-w-0 truncate text-base font-semibold text-gray-900 dark:text-gray-100">
           {sessionTitle(session)}
         </span>
-        <span className="shrink-0 text-sm text-gray-400">{formatDate(session.startedAt)}</span>
-        <span className="shrink-0 text-sm text-gray-400">{formatDuration(session.durationSeconds)}</span>
+        <span className="shrink-0 text-sm text-gray-400 dark:text-gray-500">{formatDate(session.startedAt)}</span>
+        <span className="shrink-0 text-sm text-gray-400 dark:text-gray-500">{formatDuration(session.durationSeconds)}</span>
         {session.activityType === 'breath' && session.complexity != null && (
-          <span className="shrink-0 text-sm text-gray-400">
+          <span className="shrink-0 text-sm text-gray-400 dark:text-gray-500">
             · Difficulty {session.complexity.toFixed(1)}
           </span>
         )}
@@ -89,7 +89,7 @@ export function SessionCharts({ session }: SessionChartsProps) {
           </div>
         ) : isEmpty ? (
           <div className="flex h-32 items-center justify-center">
-            <span className="text-sm text-gray-400">No data for this session</span>
+            <span className="text-sm text-gray-400 dark:text-gray-500">No data for this session</span>
           </div>
         ) : (
           <EChart option={option} style={{ height, width: '100%' }} notMerge />

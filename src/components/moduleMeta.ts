@@ -6,8 +6,8 @@ export const MODULE_LABELS: Record<ActivityType, string> = {
 };
 
 export const MODULE_STYLES: Record<ActivityType, string> = {
-  breath: 'bg-sky-50 text-sky-700',
-  meditation: 'bg-violet-50 text-violet-700',
+  breath: 'bg-sky-50 text-sky-700 dark:bg-sky-900 dark:text-sky-300',
+  meditation: 'bg-violet-50 text-violet-700 dark:bg-violet-900 dark:text-violet-300',
 };
 
 /**

@@ -6,7 +6,7 @@ interface ModuleBadgeProps {
 }
 
 export function ModuleBadge({ type }: ModuleBadgeProps) {
-  const style = MODULE_STYLES[type] ?? 'bg-gray-100 text-gray-600';
+  const style = MODULE_STYLES[type] ?? 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400';
   return (
     <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${style}`}>
       {moduleLabel(type)}

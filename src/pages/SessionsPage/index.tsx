@@ -45,13 +45,13 @@ export function SessionsPage() {
       : undefined;
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden">
+    <div className="flex h-screen flex-col overflow-hidden bg-gray-50 dark:bg-gray-950">
       <PageHeader />
 
       {/* Content row */}
       <div className="flex flex-1 overflow-hidden">
         {/* Left column */}
-        <div className="flex w-[280px] shrink-0 flex-col border-r border-gray-200">
+        <div className="flex w-[280px] shrink-0 flex-col border-r border-gray-200 dark:border-gray-700">
           <ModuleFilter value={filter} onChange={setFilter} />
           <div className="flex-1 overflow-y-auto">
             <SessionList
@@ -72,7 +72,7 @@ export function SessionsPage() {
             <SessionCharts session={selectedSession} />
           ) : (
             <div className="flex h-full items-center justify-center">
-              <span className="text-gray-400">
+              <span className="text-gray-400 dark:text-gray-500">
                 {id && isLoading ? 'Loading…' : 'Select a session'}
               </span>
             </div>

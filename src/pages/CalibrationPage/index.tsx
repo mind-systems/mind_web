@@ -44,7 +44,7 @@ export function CalibrationPage() {
   const deviceGroups = groupByDevice(allRecords);
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden">
+    <div className="flex h-screen flex-col overflow-hidden bg-gray-50 dark:bg-gray-950">
       <PageHeader />
 
       {/* Body */}
@@ -55,7 +55,7 @@ export function CalibrationPage() {
           <div className="p-6 text-red-500">Failed to load calibration records.</div>
         ) : deviceGroups.length === 0 ? (
           <div className="flex h-full items-center justify-center">
-            <span className="text-gray-400">No calibrations recorded yet</span>
+            <span className="text-gray-400 dark:text-gray-500">No calibrations recorded yet</span>
           </div>
         ) : (
           <>
@@ -71,7 +71,7 @@ export function CalibrationPage() {
             <div ref={sentinelRef} className="h-1" />
 
             {isFetchingNextPage && (
-              <div className="py-4 text-center text-sm text-gray-400">Loading…</div>
+              <div className="py-4 text-center text-sm text-gray-400 dark:text-gray-500">Loading…</div>
             )}
           </>
         )}
