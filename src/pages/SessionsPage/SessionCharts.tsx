@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import ReactECharts from 'echarts-for-react';
+import { EChart } from '@/components/EChart';
 import { apiFetch } from '@/core/api/client';
 import { ModuleBadge } from '@/components/ModuleBadge';
 import { SkeletonLoader } from '@/components/SkeletonLoader';
@@ -92,7 +92,7 @@ export function SessionCharts({ session }: SessionChartsProps) {
             <span className="text-sm text-gray-400">No data for this session</span>
           </div>
         ) : (
-          <ReactECharts option={option} style={{ height, width: '100%' }} notMerge />
+          <EChart option={option} style={{ height, width: '100%' }} notMerge />
         )}
       </div>
     </div>

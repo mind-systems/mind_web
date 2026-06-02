@@ -1,4 +1,5 @@
-import ReactECharts from 'echarts-for-react';
+import { useMemo } from 'react';
+import { EChart } from '@/components/EChart';
 import type { NfbCalibrationRecord } from '@/core/types';
 import { buildCalibrationChartOption } from './chartOption';
 
@@ -9,7 +10,7 @@ interface CalibrationChartProps {
 }
 
 export function CalibrationChart({ deviceSerial, records, validCount }: CalibrationChartProps) {
-  const option = buildCalibrationChartOption(records);
+  const option = useMemo(() => buildCalibrationChartOption(records), [records]);
 
   return (
     <section className="border-b border-gray-100 px-6 py-5">
@@ -19,7 +20,7 @@ export function CalibrationChart({ deviceSerial, records, validCount }: Calibrat
           {validCount} / {records.length} valid
         </span>
       </div>
-      <ReactECharts
+      <EChart
         option={option}
         style={{ height: 320, width: '100%' }}
         notMerge

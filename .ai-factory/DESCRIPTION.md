@@ -18,7 +18,7 @@ Browser-based dashboard for viewing historical session data collected by the Min
 - **Styling:** TailwindCSS
 - **Routing:** React Router v6
 - **Data fetching:** TanStack Query (React Query)
-- **Charts:** ECharts (`echarts` + `echarts-for-react`)
+- **Charts:** ECharts (`echarts` via custom `EChart` wrapper component)
 - **Auth:** JWT in localStorage, same token format as mobile; Google Sign-In via Web OAuth redirect; email OTP via REST API
 
 ## Architecture
