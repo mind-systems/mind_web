@@ -34,9 +34,10 @@ export interface PhaseBar {
 }
 
 export interface InstructionDto {
-  timestamp: string;
-  type: string;
-  payload: {
+  timestamp: number;
+  moduleId: string;
+  instructionType: string;
+  data: {
     phase?: BreathPhase;
     durationMs?: number;
   } & Record<string, unknown>;

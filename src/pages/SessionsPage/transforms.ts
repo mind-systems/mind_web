@@ -1,7 +1,7 @@
 import type { InstructionDto, BioSampleDto, PhaseBar } from '@/core/types';
 
 /** Returns seconds elapsed from `startedAt` to `ts`. */
-export function secFromStart(ts: string, startedAt: string): number {
+export function secFromStart(ts: string | number, startedAt: string): number {
   return (new Date(ts).getTime() - new Date(startedAt).getTime()) / 1000;
 }
 
@@ -15,7 +15,7 @@ export function parsePhases(
   startedAt: string,
   endedAt: string,
 ): PhaseBar[] {
-  const breathEvents = instructions.filter((i) => i.type === 'breath_phase');
+  const breathEvents = instructions.filter((i) => i.instructionType === 'breath_phase');
   if (breathEvents.length === 0) return [];
 
   return breathEvents.map((event, idx) => {
@@ -27,7 +27,7 @@ export function parsePhases(
     return {
       startSec,
       endSec,
-      phase: event.payload.phase ?? 'rest',
+      phase: event.data.phase ?? 'rest',
     } satisfies PhaseBar;
   });
 }
