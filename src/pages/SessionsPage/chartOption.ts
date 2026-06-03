@@ -9,6 +9,13 @@ export const PHASE_COLORS: Record<string, string> = {
   rest: '#9E9E9E',
 };
 
+export const PHASE_LABELS: Record<string, string> = {
+  inhale: 'Inhale',
+  hold: 'Hold',
+  exhale: 'Exhale',
+  rest: 'Rest',
+};
+
 // Layout constants (all in pixels)
 const INSTRUCTION_HEIGHT = 80;
 const DATA_HEIGHT = 160;
@@ -224,24 +231,46 @@ export function buildSessionChartOption(
           type: 'custom' as const,
           xAxisIndex: INSTRUCTION_GRID,
           yAxisIndex: INSTRUCTION_GRID,
-          renderItem: (_params: unknown, api: RenderItemAPI) => {
+          renderItem: (params: { dataIndex: number }, api: RenderItemAPI) => {
             const startSec = api.value(0);
             const endSec = api.value(1);
             // coord maps [dataSec, dataY] → [pixelX, pixelY].
             // Y=1 is the top of the instruction grid, Y=0 is the bottom.
             const topLeft = api.coord([startSec, 1]);
             const bottomRight = api.coord([endSec, 0]);
-            return {
-              type: 'rect',
+            const barWidth = Math.max(bottomRight[0] - topLeft[0], 1);
+            const barHeight = Math.max(bottomRight[1] - topLeft[1], 1);
+            const rect = {
+              type: 'rect' as const,
               shape: {
                 x: topLeft[0],
                 y: topLeft[1],
-                width: Math.max(bottomRight[0] - topLeft[0], 1),
-                height: Math.max(bottomRight[1] - topLeft[1], 1),
+                width: barWidth,
+                height: barHeight,
               },
               style: api.style(),
               z2: 0,
             };
+            if (barWidth < 40) return rect;
+            const bar = phases[params.dataIndex];
+            const phaseLabel = PHASE_LABELS[bar.phase] ?? bar.phase;
+            const label =
+              bar.durationMs !== undefined
+                ? `${phaseLabel} · ${Math.round(bar.durationMs / 1000)}s`
+                : phaseLabel;
+            const text = {
+              type: 'text' as const,
+              style: {
+                text: label,
+                x: topLeft[0] + 6,
+                y: topLeft[1] + barHeight / 2,
+                fill: '#fff',
+                font: 'bold 11px sans-serif',
+                textBaseline: 'middle',
+              },
+              z2: 1,
+            };
+            return { type: 'group', children: [rect, text] };
           },
           data: phases.map((p) => ({
             value: [p.startSec, p.endSec],

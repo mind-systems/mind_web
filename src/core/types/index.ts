@@ -31,6 +31,7 @@ export interface PhaseBar {
   startSec: number;
   endSec: number;
   phase: BreathPhase;
+  durationMs?: number;
 }
 
 export interface InstructionDto {

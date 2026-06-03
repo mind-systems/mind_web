@@ -28,6 +28,7 @@ export function parsePhases(
       startSec,
       endSec,
       phase: event.data.phase ?? 'rest',
+      durationMs: event.data.durationMs,
     } satisfies PhaseBar;
   });
 }
