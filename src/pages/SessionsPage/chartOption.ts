@@ -53,10 +53,10 @@ function buildLineSeriesEntry(
 
 /**
  * Builds a fully self-contained EChartsOption and the matching canvas height for a session
- * detail panel. Up to four vertically-stacked grids are included — instruction phases only
- * when phase data is non-empty, heart rate, EEG bands, and emotions only when their sample
- * data is non-empty. Grid presence is derived from the same toSeries/parsePhases calls that
- * feed the option, so `height` is always consistent with the rendered layout.
+ * detail panel. Up to five vertically-stacked grids are included — instruction phases only
+ * when phase data is non-empty, heart rate, EEG bands, emotions, and motion sensors only when
+ * their sample data is non-empty. Grid presence is derived from the same toSeries/parsePhases
+ * calls that feed the option, so `height` is always consistent with the rendered layout.
  * All X-axes are value-based and linked via dataZoom.
  * Returns `gridCount` — the number of grids that will be rendered — so callers can detect
  * when nothing is renderable (gridCount === 0) and show an empty state instead of the chart.
@@ -102,6 +102,14 @@ export function buildSessionChartOption(
   const cogCtrlSeries = toSeries(emotions, 'cognitiveControl', startMs);
   const selfCtrlSeries = toSeries(emotions, 'selfControl', startMs);
 
+  const motion = byType.get('motion') ?? [];
+  const axSeries = toSeries(motion, 'ax', startMs);
+  const aySeries = toSeries(motion, 'ay', startMs);
+  const azSeries = toSeries(motion, 'az', startMs);
+  const gxSeries = toSeries(motion, 'gx', startMs);
+  const gySeries = toSeries(motion, 'gy', startMs);
+  const gzSeries = toSeries(motion, 'gz', startMs);
+
   // --- Presence flags ---
   const hasPhases = phases.length > 0;
   const hasHeartRate = heartRateSeries.length > 0;
@@ -117,6 +125,13 @@ export function buildSessionChartOption(
     cogLoadSeries.length > 0 ||
     cogCtrlSeries.length > 0 ||
     selfCtrlSeries.length > 0;
+  const hasMotion =
+    axSeries.length > 0 ||
+    aySeries.length > 0 ||
+    azSeries.length > 0 ||
+    gxSeries.length > 0 ||
+    gySeries.length > 0 ||
+    gzSeries.length > 0;
 
   // --- Dynamic grid index assignment ---
   // INSTRUCTION_GRID is index 0 when phase data is present, otherwise omitted.
@@ -126,6 +141,7 @@ export function buildSessionChartOption(
   const HR_GRID = hasHeartRate ? nextIdx++ : undefined;
   const EEG_GRID = hasEeg ? nextIdx++ : undefined;
   const EMOT_GRID = hasEmotions ? nextIdx++ : undefined;
+  const MOTION_GRID = hasMotion ? nextIdx++ : undefined;
   const totalGrids = nextIdx;
 
   // --- Grid top-position computation ---
@@ -134,6 +150,7 @@ export function buildSessionChartOption(
     ...(hasHeartRate ? [DATA_HEIGHT] : []),
     ...(hasEeg ? [DATA_HEIGHT] : []),
     ...(hasEmotions ? [DATA_HEIGHT] : []),
+    ...(hasMotion ? [DATA_HEIGHT] : []),
   ];
 
   const gridTops: number[] = [];
@@ -213,6 +230,19 @@ export function buildSessionChartOption(
             gridIndex: EMOT_GRID,
             scale: true,
             name: 'Score',
+            nameTextStyle: { fontSize: 11, color: '#888' },
+            axisLabel: { fontSize: 10, color: '#888' },
+            splitLine: { show: true, lineStyle: { color: '#f5f5f5' } },
+          },
+        ]
+      : []),
+    ...(MOTION_GRID !== undefined
+      ? [
+          {
+            type: 'value' as const,
+            gridIndex: MOTION_GRID,
+            scale: true,
+            name: 'm/s²·rad/s',
             nameTextStyle: { fontSize: 11, color: '#888' },
             axisLabel: { fontSize: 10, color: '#888' },
             splitLine: { show: true, lineStyle: { color: '#f5f5f5' } },
@@ -303,6 +333,16 @@ export function buildSessionChartOption(
           buildLineSeriesEntry(EMOT_GRID, cogLoadSeries, 'cognitiveLoad', '#E89B2A'),
           buildLineSeriesEntry(EMOT_GRID, cogCtrlSeries, 'cognitiveControl', '#C973C1'),
           buildLineSeriesEntry(EMOT_GRID, selfCtrlSeries, 'selfControl', '#E96F6F'),
+        ]
+      : []),
+    ...(MOTION_GRID !== undefined
+      ? [
+          buildLineSeriesEntry(MOTION_GRID, axSeries, 'ax', '#60B4E8'),
+          buildLineSeriesEntry(MOTION_GRID, aySeries, 'ay', '#82C492'),
+          buildLineSeriesEntry(MOTION_GRID, azSeries, 'az', '#F0B060'),
+          buildLineSeriesEntry(MOTION_GRID, gxSeries, 'gx', '#D4739A'),
+          buildLineSeriesEntry(MOTION_GRID, gySeries, 'gy', '#7BC7C7'),
+          buildLineSeriesEntry(MOTION_GRID, gzSeries, 'gz', '#B8A4D8'),
         ]
       : []),
   ];
