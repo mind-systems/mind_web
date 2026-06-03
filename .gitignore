@@ -26,6 +26,7 @@ logs/
 # Misc
 *.tmp
 *.bak
+.playwright-mcp/
 
 # Vite
 dist-ssr
