@@ -69,7 +69,7 @@ export function SessionsPage() {
         {/* Right panel */}
         <div className="flex-1 overflow-y-auto">
           {selectedSession ? (
-            <SessionCharts session={selectedSession} />
+            <SessionCharts key={selectedSession.id} session={selectedSession} />
           ) : (
             <div className="flex h-full items-center justify-center">
               <span className="text-gray-400 dark:text-gray-500">

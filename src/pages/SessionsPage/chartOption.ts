@@ -32,13 +32,20 @@ interface RenderItemAPI {
   style: () => Record<string, unknown>;
 }
 
+/**
+ * Builds a line series entry. The stable `id` is informational only — the biometric
+ * chart re-renders with `notMerge: true` (full rebuild) on each chunk, so components
+ * are recreated fresh every render and never reconciled across merges.
+ */
 function buildLineSeriesEntry(
+  id: string,
   gridIndex: number,
   data: [number, number][],
   name: string,
   color: string,
 ) {
   return {
+    id,
     type: 'line' as const,
     xAxisIndex: gridIndex,
     yAxisIndex: gridIndex,
@@ -58,6 +65,17 @@ function buildLineSeriesEntry(
  * their sample data is non-empty. Grid presence is derived from the same toSeries/parsePhases
  * calls that feed the option, so `height` is always consistent with the rendered layout.
  * All X-axes are value-based and linked via dataZoom.
+ *
+ * Grids, axes, and series carry stable role-based `id`s, but the biometric chart renders
+ * with `notMerge: true` (full rebuild per chunk), so indices are reassigned fresh on every
+ * render. This is what keeps the layout correct when a sampleType first appears in a later
+ * chunk (e.g. a BCI sensor that locks after warmup): incremental merge (`notMerge: false`
+ * and `replaceMerge` alike) preserves each component's creation-order index and would bind
+ * series to the wrong axes; a full rebuild avoids that entirely.
+ *
+ * The optional `zoom` parameter preserves the current zoom window across each full rebuild.
+ * Without it, each rebuild would re-apply `start: 0, end: 100` and snap the view to full.
+ *
  * Returns `gridCount` — the number of grids that will be rendered — so callers can detect
  * when nothing is renderable (gridCount === 0) and show an empty state instead of the chart.
  */
@@ -66,6 +84,7 @@ export function buildSessionChartOption(
   biometrics: BioSampleDto[],
   startedAt: string,
   endedAt: string,
+  zoom: { start: number; end: number } = { start: 0, end: 100 },
 ): { option: EChartsOption; height: number; gridCount: number } {
   const startMs = new Date(startedAt).getTime();
   const durationSec = (new Date(endedAt).getTime() - startMs) / 1000;
@@ -144,24 +163,29 @@ export function buildSessionChartOption(
   const MOTION_GRID = hasMotion ? nextIdx++ : undefined;
   const totalGrids = nextIdx;
 
-  // --- Grid top-position computation ---
-  const gridHeights = [
-    ...(hasPhases ? [INSTRUCTION_HEIGHT] : []),
-    ...(hasHeartRate ? [DATA_HEIGHT] : []),
-    ...(hasEeg ? [DATA_HEIGHT] : []),
-    ...(hasEmotions ? [DATA_HEIGHT] : []),
-    ...(hasMotion ? [DATA_HEIGHT] : []),
+  // Grid definitions ordered by presence — parallel to the index assignment above.
+  // Each entry carries a stable role-based id so ECharts merge reconciles by id, not
+  // array index. This prevents misalignment when a sampleType first appears in a later chunk.
+  interface GridDef { id: string; height: number }
+  const gridDefs: GridDef[] = [
+    ...(hasPhases ? [{ id: 'instruction', height: INSTRUCTION_HEIGHT }] : []),
+    ...(hasHeartRate ? [{ id: 'hr', height: DATA_HEIGHT }] : []),
+    ...(hasEeg ? [{ id: 'eeg', height: DATA_HEIGHT }] : []),
+    ...(hasEmotions ? [{ id: 'emot', height: DATA_HEIGHT }] : []),
+    ...(hasMotion ? [{ id: 'motion', height: DATA_HEIGHT }] : []),
   ];
 
+  // --- Grid top-position computation ---
   const gridTops: number[] = [];
   let currentTop = TOP;
-  for (const h of gridHeights) {
+  for (const { height: h } of gridDefs) {
     gridTops.push(currentTop);
     currentTop += h + GAP;
   }
 
   // --- Grids ---
-  const grids = gridHeights.map((height, i) => ({
+  const grids = gridDefs.map(({ id, height }, i) => ({
+    id,
     left: LEFT,
     right: RIGHT,
     top: gridTops[i],
@@ -169,7 +193,8 @@ export function buildSessionChartOption(
   }));
 
   // --- X-axes (one per grid, value type, same domain) ---
-  const xAxes = Array.from({ length: totalGrids }, (_, i) => ({
+  const xAxes = gridDefs.map(({ id }, i) => ({
+    id: `${id}-x`,
     type: 'value' as const,
     gridIndex: i,
     min: 0,
@@ -189,6 +214,7 @@ export function buildSessionChartOption(
     ...(INSTRUCTION_GRID !== undefined
       ? [
           {
+            id: 'instruction-y',
             type: 'value' as const,
             gridIndex: INSTRUCTION_GRID,
             min: 0,
@@ -200,6 +226,7 @@ export function buildSessionChartOption(
     ...(HR_GRID !== undefined
       ? [
           {
+            id: 'hr-y',
             type: 'value' as const,
             gridIndex: HR_GRID,
             scale: true,
@@ -213,6 +240,7 @@ export function buildSessionChartOption(
     ...(EEG_GRID !== undefined
       ? [
           {
+            id: 'eeg-y',
             type: 'value' as const,
             gridIndex: EEG_GRID,
             scale: true,
@@ -226,6 +254,7 @@ export function buildSessionChartOption(
     ...(EMOT_GRID !== undefined
       ? [
           {
+            id: 'emot-y',
             type: 'value' as const,
             gridIndex: EMOT_GRID,
             scale: true,
@@ -239,6 +268,7 @@ export function buildSessionChartOption(
     ...(MOTION_GRID !== undefined
       ? [
           {
+            id: 'motion-y',
             type: 'value' as const,
             gridIndex: MOTION_GRID,
             scale: true,
@@ -258,6 +288,7 @@ export function buildSessionChartOption(
   const phaseSeries =
     INSTRUCTION_GRID !== undefined
       ? {
+          id: 'phase',
           type: 'custom' as const,
           xAxisIndex: INSTRUCTION_GRID,
           yAxisIndex: INSTRUCTION_GRID,
@@ -315,34 +346,34 @@ export function buildSessionChartOption(
   const allSeries = [
     ...(phaseSeries != null ? [phaseSeries] : []),
     ...(HR_GRID !== undefined
-      ? [buildLineSeriesEntry(HR_GRID, heartRateSeries, 'Heart Rate', '#f88d8d')]
+      ? [buildLineSeriesEntry('hr', HR_GRID, heartRateSeries, 'Heart Rate', '#f88d8d')]
       : []),
     ...(EEG_GRID !== undefined
       ? [
-          buildLineSeriesEntry(EEG_GRID, deltaSeries, 'delta', '#4B9CD3'),
-          buildLineSeriesEntry(EEG_GRID, thetaSeries, 'theta', '#5BAD6F'),
-          buildLineSeriesEntry(EEG_GRID, alphaSeries, 'alpha', '#E89B2A'),
-          buildLineSeriesEntry(EEG_GRID, smrSeries, 'smr', '#C973C1'),
-          buildLineSeriesEntry(EEG_GRID, betaSeries, 'beta', '#E96F6F'),
+          buildLineSeriesEntry('eeg-delta', EEG_GRID, deltaSeries, 'delta', '#4B9CD3'),
+          buildLineSeriesEntry('eeg-theta', EEG_GRID, thetaSeries, 'theta', '#5BAD6F'),
+          buildLineSeriesEntry('eeg-alpha', EEG_GRID, alphaSeries, 'alpha', '#E89B2A'),
+          buildLineSeriesEntry('eeg-smr', EEG_GRID, smrSeries, 'smr', '#C973C1'),
+          buildLineSeriesEntry('eeg-beta', EEG_GRID, betaSeries, 'beta', '#E96F6F'),
         ]
       : []),
     ...(EMOT_GRID !== undefined
       ? [
-          buildLineSeriesEntry(EMOT_GRID, attentionSeries, 'attention', '#4B9CD3'),
-          buildLineSeriesEntry(EMOT_GRID, relaxationSeries, 'relaxation', '#5BAD6F'),
-          buildLineSeriesEntry(EMOT_GRID, cogLoadSeries, 'cognitiveLoad', '#E89B2A'),
-          buildLineSeriesEntry(EMOT_GRID, cogCtrlSeries, 'cognitiveControl', '#C973C1'),
-          buildLineSeriesEntry(EMOT_GRID, selfCtrlSeries, 'selfControl', '#E96F6F'),
+          buildLineSeriesEntry('emot-attention', EMOT_GRID, attentionSeries, 'attention', '#4B9CD3'),
+          buildLineSeriesEntry('emot-relaxation', EMOT_GRID, relaxationSeries, 'relaxation', '#5BAD6F'),
+          buildLineSeriesEntry('emot-cogLoad', EMOT_GRID, cogLoadSeries, 'cognitiveLoad', '#E89B2A'),
+          buildLineSeriesEntry('emot-cogCtrl', EMOT_GRID, cogCtrlSeries, 'cognitiveControl', '#C973C1'),
+          buildLineSeriesEntry('emot-selfCtrl', EMOT_GRID, selfCtrlSeries, 'selfControl', '#E96F6F'),
         ]
       : []),
     ...(MOTION_GRID !== undefined
       ? [
-          buildLineSeriesEntry(MOTION_GRID, axSeries, 'ax', '#60B4E8'),
-          buildLineSeriesEntry(MOTION_GRID, aySeries, 'ay', '#82C492'),
-          buildLineSeriesEntry(MOTION_GRID, azSeries, 'az', '#F0B060'),
-          buildLineSeriesEntry(MOTION_GRID, gxSeries, 'gx', '#D4739A'),
-          buildLineSeriesEntry(MOTION_GRID, gySeries, 'gy', '#7BC7C7'),
-          buildLineSeriesEntry(MOTION_GRID, gzSeries, 'gz', '#B8A4D8'),
+          buildLineSeriesEntry('motion-ax', MOTION_GRID, axSeries, 'ax', '#60B4E8'),
+          buildLineSeriesEntry('motion-ay', MOTION_GRID, aySeries, 'ay', '#82C492'),
+          buildLineSeriesEntry('motion-az', MOTION_GRID, azSeries, 'az', '#F0B060'),
+          buildLineSeriesEntry('motion-gx', MOTION_GRID, gxSeries, 'gx', '#D4739A'),
+          buildLineSeriesEntry('motion-gy', MOTION_GRID, gySeries, 'gy', '#7BC7C7'),
+          buildLineSeriesEntry('motion-gz', MOTION_GRID, gzSeries, 'gz', '#B8A4D8'),
         ]
       : []),
   ];
@@ -369,16 +400,16 @@ export function buildSessionChartOption(
       {
         type: 'inside' as const,
         xAxisIndex: 'all' as const,
-        start: 0,
-        end: 100,
+        start: zoom.start,
+        end: zoom.end,
       },
       {
         type: 'slider' as const,
         xAxisIndex: 'all' as const,
         bottom: 10,
         height: 30,
-        start: 0,
-        end: 100,
+        start: zoom.start,
+        end: zoom.end,
       },
     ],
   };

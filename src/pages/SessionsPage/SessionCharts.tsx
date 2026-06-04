@@ -1,19 +1,29 @@
-import { useMemo } from 'react';
+import { useRef, useCallback, useMemo, useEffect } from 'react';
+
+// The biometric chart is rebuilt in full on every chunk arrival (notMerge: true).
+// Incremental merge was measured to corrupt the layout: when a sampleType first appears
+// in a later chunk (e.g. a sensor that locks after warmup), ECharts preserves each
+// component's creation-order index across both normal merge and replaceMerge, so the
+// option's numeric xAxisIndex/yAxisIndex links resolve to the wrong axes — plotting data
+// against the wrong scale. A full rebuild assigns indices fresh each render, and the
+// zoom.start/end values already encoded in the option keep the current zoom window.
 import { useQuery } from '@tanstack/react-query';
 import { EChart } from '@/components/EChart';
 import { apiFetch } from '@/core/api/client';
 import { ModuleBadge } from '@/components/ModuleBadge';
 import { SkeletonLoader } from '@/components/SkeletonLoader';
-import type { SessionRun, InstructionDto, BioSampleDto } from '@/core/types';
+import type { SessionRun, InstructionDto } from '@/core/types';
 import { formatDate, formatDuration } from '@/core/format';
 import { buildSessionChartOption } from './chartOption';
 import { sessionTitle } from './sessionTitle';
+import { useBiometricChunks, CHUNK_SEC } from './useBiometricChunks';
 
 interface SessionChartsProps {
   session: SessionRun;
 }
 
 export function SessionCharts({ session }: SessionChartsProps) {
+  // Keep from/to for the instructions query (unchanged).
   const from = encodeURIComponent(session.startedAt);
   const to = encodeURIComponent(session.endedAt);
 
@@ -30,37 +40,91 @@ export function SessionCharts({ session }: SessionChartsProps) {
   });
 
   const {
-    data: biometricsData,
-    isLoading: biometricsLoading,
-    isError: biometricsError,
-  } = useQuery({
-    queryKey: ['session-biometrics', session.id],
-    queryFn: () =>
-      apiFetch<BioSampleDto[]>(
-        `/sessions/runs/${session.id}/biometrics?from=${from}&to=${to}`,
-      ),
-  });
+    biometrics,
+    requestChunks,
+    isLoading: isChunkLoading,
+    totalChunks,
+    allChunksAttempted,
+  } = useBiometricChunks(session);
 
-  const isLoading = instructionsLoading || biometricsLoading;
-  const isError = instructionsError || biometricsError;
+  // Tracks the current zoom window so each full rebuild re-applies it
+  // instead of snapping back to full range (start: 0, end: 100).
+  const zoomRef = useRef({ start: 0, end: 100 });
+
+  // Stable callback — deps do NOT include any per-chunk state (loadedChunks is
+  // intentionally absent), so the callback identity does not change as chunks arrive.
+  // This prevents the EChart binding effect from re-running on every chunk load.
+  const handleDataZoom = useCallback(
+    (params: unknown) => {
+      const p = params as {
+        start?: number;
+        end?: number;
+        batch?: { start?: number; end?: number }[];
+      };
+      const start = p.batch?.[0]?.start ?? p.start ?? 0;
+      const end = p.batch?.[0]?.end ?? p.end ?? 100;
+
+      // Persist zoom so the next option rebuild preserves the current window.
+      zoomRef.current = { start, end };
+
+      // datazoom start/end are percentages of the axis range [0, durationSec].
+      const durationSec = session.durationSeconds;
+      const startSec = (start / 100) * durationSec;
+      const endSec = (end / 100) * durationSec;
+
+      const firstChunk = Math.floor(startSec / CHUNK_SEC);
+      const lastChunk = Math.min(Math.floor(endSec / CHUNK_SEC), totalChunks - 1);
+      const idxs: number[] = [];
+      for (let i = firstChunk; i <= lastChunk; i++) {
+        idxs.push(i);
+      }
+      requestChunks(idxs);
+    },
+    [session.durationSeconds, requestChunks, totalChunks],
+  );
+
+  // Stable object — changes only when handleDataZoom changes (i.e. on session switch).
+  const events = useMemo(() => ({ datazoom: handleDataZoom }), [handleDataZoom]);
 
   // Always computed — the builder handles empty arrays gracefully, and this ensures
   // height and gridCount are always derived from the same grid-presence logic as the rendered option.
+  // zoomRef is read without being a dep: we want the latest zoom captured at rebuild time
+  // without retriggering the memo on every zoom event.
   const { option, height, gridCount } = useMemo(
     () =>
       buildSessionChartOption(
         instructionsData ?? [],
-        biometricsData ?? [],
+        biometrics,
         session.startedAt,
         session.endedAt,
+        // Reading the ref at rebuild time is intentional: it captures the latest zoom
+        // window without subscribing the memo to every zoom event.
+        // eslint-disable-next-line react-hooks/refs
+        zoomRef.current,
       ),
-    [instructionsData, biometricsData, session.startedAt, session.endedAt],
+    [instructionsData, biometrics, session.startedAt, session.endedAt],
   );
 
-  // Keying isEmpty off gridCount rather than raw array lengths correctly handles sessions
-  // that have instructions but no renderable grids (e.g. meditation without a BCI device —
-  // instructions are session_event type, so no breath phases and no biometrics → gridCount === 0).
-  const isEmpty = !isLoading && !isError && gridCount === 0;
+  // Show skeleton until instructions have loaded AND at least the first chunk is visible.
+  // Chunk errors are soft (logged, never surfaced), so isError covers instructions only.
+  const isLoading = instructionsLoading || (biometrics.length === 0 && isChunkLoading);
+  const isError = instructionsError;
+
+  // Keying isEmpty off gridCount + allChunksAttempted prevents permanently trapping sessions
+  // whose biometric streams start after the first 30 s chunk (e.g. a BCI sensor that locks
+  // after warm-up): the EChart must render so datazoom can fire and load later chunks.
+  const isEmpty = !isLoading && !isError && gridCount === 0 && allChunksAttempted;
+
+  // When chunk 0 yields no renderable axes (no phases, no biometrics), datazoom can never
+  // fire, so interaction-driven loading is impossible. Eagerly drain remaining chunks so
+  // allChunksAttempted can resolve and the session is confirmed empty — or data from a
+  // later chunk surfaces and the chart renders normally.
+  useEffect(() => {
+    if (isLoading || gridCount !== 0 || allChunksAttempted) return;
+    const remaining: number[] = [];
+    for (let i = 1; i < totalChunks; i++) remaining.push(i);
+    if (remaining.length > 0) requestChunks(remaining);
+  }, [isLoading, gridCount, allChunksAttempted, totalChunks, requestChunks]);
 
   return (
     <div className="flex h-full flex-col">
@@ -77,6 +141,10 @@ export function SessionCharts({ session }: SessionChartsProps) {
             · Difficulty {session.complexity.toFixed(1)}
           </span>
         )}
+        {/* Subtle indicator shown only after the first chunk is visible and more are loading */}
+        {isChunkLoading && biometrics.length > 0 && (
+          <span className="shrink-0 text-sm text-gray-400 dark:text-gray-500">Loading…</span>
+        )}
       </div>
 
       {/* Body */}
@@ -92,7 +160,7 @@ export function SessionCharts({ session }: SessionChartsProps) {
             <span className="text-sm text-gray-400 dark:text-gray-500">No data for this session</span>
           </div>
         ) : (
-          <EChart option={option} style={{ height, width: '100%' }} notMerge />
+          <EChart option={option} style={{ height, width: '100%' }} notMerge onEvents={events} />
         )}
       </div>
     </div>

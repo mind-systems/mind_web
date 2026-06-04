@@ -35,8 +35,12 @@ export function parsePhases(
 
 /**
  * Converts pre-filtered `samples` (already scoped to a single sampleType) to
- * `[secondsFromStart, value]` pairs. Only samples where `data[field]` is a number
- * are included. `startMs` is the session start time in milliseconds.
+ * `[secondsFromStart, value]` pairs sorted ascending by time. Only samples where
+ * `data[field]` is a number are included. `startMs` is the session start in ms.
+ *
+ * Sorting is required because chunks may arrive out of order (zoom-driven loading),
+ * and ECharts `type: 'line'` on a `value` x-axis connects points in array order —
+ * without the sort, out-of-order arrival draws backward "tie-back" strokes.
  */
 export function toSeries(
   samples: BioSampleDto[],
@@ -45,5 +49,6 @@ export function toSeries(
 ): [number, number][] {
   return samples
     .filter((s) => typeof s.data[field] === 'number')
-    .map((s) => [(new Date(s.timestamp).getTime() - startMs) / 1000, s.data[field] as number]);
+    .map((s) => [(new Date(s.timestamp).getTime() - startMs) / 1000, s.data[field] as number])
+    .sort((a, b) => a[0] - b[0]);
 }
