@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { apiFetch } from '@/core/api/client';
+import { logger } from '@/core/observe';
 import type { SessionRun, BioSampleDto } from '@/core/types';
 
 export const CHUNK_SEC = 30;
@@ -115,10 +116,7 @@ export function useBiometricChunks(session: SessionRun): UseBiometricChunksResul
       .catch((err: unknown) => {
         if (fetchIdRef.current !== myFetchId) return;
         // Soft error: mark as attempted so the drain loop does not retry forever.
-        console.error(
-          `Failed to load biometric chunk ${idx} for session ${session.id}:`,
-          err,
-        );
+        logger.error(`Failed to load biometric chunk ${idx} for session ${session.id}`, { err });
         loadedRef.current.add(idx);
       })
       .finally(() => {

@@ -31,7 +31,10 @@ import { logToConsole, logToObserver } from './config';
 type ConsoleFn = (msg: string, ...rest: unknown[]) => void;
 
 function emit(level: Level, consoleFn: ConsoleFn, msg: string, attrs?: Record<string, unknown>): void {
-  if (logToConsole) attrs ? consoleFn(msg, attrs) : consoleFn(msg);
+  if (logToConsole) {
+    if (attrs) consoleFn(msg, attrs);
+    else consoleFn(msg);
+  }
   if (logToObserver) log(level, msg, attrs);
 }
 
