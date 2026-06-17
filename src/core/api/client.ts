@@ -1,4 +1,6 @@
+import { startSpan, inject, headersCarrier } from 'observe-js';
 import { API_BASE_URL } from '@/core/config';
+import { logToObserver } from '@/core/observe/config';
 
 const TOKEN_KEY = 'mind_auth_token';
 
@@ -14,14 +16,20 @@ export class ApiError extends Error {
 export async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const token = localStorage.getItem(TOKEN_KEY);
 
-  const res = await fetch(`${API_BASE_URL}${path}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options?.headers,
-    },
-  });
+  const baseHeaders: HeadersInit = {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...options?.headers,
+  };
+
+  let headers: HeadersInit = baseHeaders;
+  if (logToObserver) {
+    const traced = new Headers(baseHeaders);
+    inject(headersCarrier(traced), startSpan());
+    headers = traced;
+  }
+
+  const res = await fetch(`${API_BASE_URL}${path}`, { ...options, headers });
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));

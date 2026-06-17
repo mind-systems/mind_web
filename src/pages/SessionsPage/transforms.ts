@@ -49,6 +49,6 @@ export function toSeries(
 ): [number, number][] {
   return samples
     .filter((s) => typeof s.data[field] === 'number')
-    .map((s) => [(new Date(s.timestamp).getTime() - startMs) / 1000, s.data[field] as number])
+    .map((s) => [(new Date(s.timestamp).getTime() - startMs) / 1000, s.data[field] as number] as [number, number])
     .sort((a, b) => a[0] - b[0]);
 }
