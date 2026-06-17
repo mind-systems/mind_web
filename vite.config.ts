@@ -9,4 +9,9 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+  server: {
+    proxy: {
+      '/otlp': { target: 'http://localhost:3100', changeOrigin: true },
+    },
+  },
 })

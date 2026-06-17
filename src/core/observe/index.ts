@@ -1,0 +1,1 @@
+export { initObserve } from './init';

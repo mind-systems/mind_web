@@ -65,3 +65,4 @@ JWT stored in `localStorage` under `mind_auth_token`. All API requests include `
 `.ai-factory/DESCRIPTION.md` — project overview and features
 `.ai-factory/ROADMAP.md` — six-phase implementation roadmap
 `.ai-factory/ARCHITECTURE.md` — architecture pattern, dependency rules, code examples
+`docs/observability.md` — OTLP log destination modes, VITE_ prefix requirement, dev proxy
