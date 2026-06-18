@@ -51,6 +51,10 @@ JWT stored in `localStorage` under `mind_auth_token`. All API requests include `
 
 `mind_api` REST endpoints. Base URL: `VITE_API_BASE_URL` env var (`.env.local` for development, gitignored). `.env.example` is committed with an empty value.
 
+## Logging
+
+- Write all logs through the `logger` facade from `@/core/observe` — `logger.info | warn | error(message)`. Never use `console.*` or any other logger.
+
 ## Rules
 
 - All files in English
