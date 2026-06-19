@@ -26,11 +26,12 @@ export interface ListRunsResponse {
 }
 
 export type BreathPhase = 'inhale' | 'hold' | 'exhale' | 'rest';
+export type PhaseKind = BreathPhase | 'pause';
 
 export interface PhaseBar {
   startSec: number;
   endSec: number;
-  phase: BreathPhase;
+  phase: PhaseKind;
 }
 
 export interface InstructionDto {
@@ -38,7 +39,7 @@ export interface InstructionDto {
   moduleId: string;
   instructionType: string;
   data: {
-    phase?: BreathPhase;
+    phase?: PhaseKind;
     offsetMs?: number;
     tickCount?: number;
   } & Record<string, unknown>;

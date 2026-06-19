@@ -7,6 +7,7 @@ export const PHASE_COLORS: Record<string, string> = {
   hold: '#4B9CD3',
   exhale: '#E89B2A',
   rest: '#9E9E9E',
+  pause: '#CFCFCF',
 };
 
 export const PHASE_LABELS: Record<string, string> = {
@@ -14,6 +15,7 @@ export const PHASE_LABELS: Record<string, string> = {
   hold: 'Hold',
   exhale: 'Exhale',
   rest: 'Rest',
+  pause: 'Pause',
 };
 
 // Layout constants (all in pixels)
@@ -315,7 +317,8 @@ export function buildSessionChartOption(
             if (barWidth < 40) return rect;
             const bar = phases[params.dataIndex];
             const phaseLabel = PHASE_LABELS[bar.phase] ?? bar.phase;
-            const label = `${phaseLabel} · ${Math.round(api.value(1) - api.value(0))}s`;
+            const durationSuffix = bar.phase !== 'pause' ? ` · ${Math.round(api.value(1) - api.value(0))}s` : '';
+            const label = `${phaseLabel}${durationSuffix}`;
             const text = {
               type: 'text' as const,
               style: {
