@@ -315,10 +315,7 @@ export function buildSessionChartOption(
             if (barWidth < 40) return rect;
             const bar = phases[params.dataIndex];
             const phaseLabel = PHASE_LABELS[bar.phase] ?? bar.phase;
-            const label =
-              bar.durationMs !== undefined
-                ? `${phaseLabel} · ${Math.round(bar.durationMs / 1000)}s`
-                : phaseLabel;
+            const label = `${phaseLabel} · ${Math.round(api.value(1) - api.value(0))}s`;
             const text = {
               type: 'text' as const,
               style: {

@@ -31,7 +31,6 @@ export interface PhaseBar {
   startSec: number;
   endSec: number;
   phase: BreathPhase;
-  durationMs?: number;
 }
 
 export interface InstructionDto {
@@ -40,7 +39,8 @@ export interface InstructionDto {
   instructionType: string;
   data: {
     phase?: BreathPhase;
-    durationMs?: number;
+    offsetMs?: number;
+    tickCount?: number;
   } & Record<string, unknown>;
 }
 

@@ -7,8 +7,9 @@ export function secFromStart(ts: string | number, startedAt: string): number {
 
 /**
  * Converts breath_phase instructions into non-overlapping PhaseBar intervals.
- * Each bar starts at its instruction timestamp and ends at the next breath_phase
- * timestamp (the last bar ends at `endedAt`). Non-breath_phase instructions are ignored.
+ * Each bar starts at its instruction `offsetMs` (monotonic ms from session start) and
+ * ends at the next instruction's `offsetMs`. The last bar ends at `endedAt − startedAt`
+ * (the axis-length scalar). Non-breath_phase instructions are ignored.
  */
 export function parsePhases(
   instructions: InstructionDto[],
@@ -19,16 +20,15 @@ export function parsePhases(
   if (breathEvents.length === 0) return [];
 
   return breathEvents.map((event, idx) => {
-    const startSec = secFromStart(event.timestamp, startedAt);
+    const startSec = (event.data.offsetMs ?? 0) / 1000;
     const nextEvent = breathEvents[idx + 1];
     const endSec = nextEvent
-      ? secFromStart(nextEvent.timestamp, startedAt)
+      ? (nextEvent.data.offsetMs ?? 0) / 1000
       : secFromStart(endedAt, startedAt);
     return {
       startSec,
       endSec,
       phase: event.data.phase ?? 'rest',
-      durationMs: event.data.durationMs,
     } satisfies PhaseBar;
   });
 }
