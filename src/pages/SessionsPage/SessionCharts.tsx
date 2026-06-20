@@ -23,10 +23,11 @@ interface SessionChartsProps {
 }
 
 export function SessionCharts({ session }: SessionChartsProps) {
-  // Keep from/to for the instructions query (unchanged).
-  const from = encodeURIComponent(session.startedAt);
-  const to = encodeURIComponent(session.endedAt);
-
+  // No time window for instructions: on the offset axis a phase's wire timestamp can fall
+  // outside [startedAt, endedAt] — the first `rest` is stamped ~0.5 s before startedAt
+  // (origin/tap precedes the server's startedAt), so a `from=startedAt` lower bound makes
+  // the API drop it. Instructions are tiny (one marker per phase), so the full set is safe
+  // to fetch unfiltered; the [from, to) window is a biometrics-only (413-avoidance) concern.
   const {
     data: instructionsData,
     isLoading: instructionsLoading,
@@ -34,9 +35,7 @@ export function SessionCharts({ session }: SessionChartsProps) {
   } = useQuery({
     queryKey: ['session-instructions', session.id],
     queryFn: () =>
-      apiFetch<InstructionDto[]>(
-        `/sessions/runs/${session.id}/instructions?from=${from}&to=${to}`,
-      ),
+      apiFetch<InstructionDto[]>(`/sessions/runs/${session.id}/instructions`),
   });
 
   const {

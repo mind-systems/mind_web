@@ -337,6 +337,10 @@ export function buildSessionChartOption(
             value: [p.startSec, p.endSec],
             itemStyle: { color: PHASE_COLORS[p.phase] ?? '#ccc' },
           })),
+          // Custom series default to clip:false — combined with the dataZoom's
+          // filterMode:'none' (which keeps every bar in the draw set), an out-of-window
+          // bar would otherwise paint past the grid edge. Clip it to the grid instead.
+          clip: true,
           z: 2,
           // Suppress phase bars from the axis tooltip — start/end seconds are meaningless there.
           tooltip: { show: false },
@@ -400,12 +404,19 @@ export function buildSessionChartOption(
       {
         type: 'inside' as const,
         xAxisIndex: 'all' as const,
+        // 'none' keeps every data item in the draw set and clips it to the grid
+        // instead of dropping it. The default 'filter' culls any item whose anchor
+        // x-dimension leaves the zoom window — which deletes a phase bar (a custom
+        // [startSec, endSec] range) the moment its left edge touches the grid edge.
+        // The first `rest` sits at offsetMs ≈ 0 (the left edge), so 'filter' erased it.
+        filterMode: 'none' as const,
         start: zoom.start,
         end: zoom.end,
       },
       {
         type: 'slider' as const,
         xAxisIndex: 'all' as const,
+        filterMode: 'none' as const,
         bottom: 10,
         height: 30,
         start: zoom.start,
