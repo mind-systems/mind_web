@@ -53,6 +53,22 @@ export function SessionCharts({ session }: SessionChartsProps) {
   // Stable callback — deps do NOT include any per-chunk state (loadedChunks is
   // intentionally absent), so the callback identity does not change as chunks arrive.
   // This prevents the EChart binding effect from re-running on every chunk load.
+  // Enqueue every chunk overlapping a [start, end] window (percentages of the full
+  // [0, durationSec] axis). Already-loaded/queued chunks are deduped by the loader.
+  const requestWindowChunks = useCallback(
+    (start: number, end: number) => {
+      const durationSec = session.durationSeconds;
+      const startSec = (start / 100) * durationSec;
+      const endSec = (end / 100) * durationSec;
+      const firstChunk = Math.floor(startSec / CHUNK_SEC);
+      const lastChunk = Math.min(Math.floor(endSec / CHUNK_SEC), totalChunks - 1);
+      const idxs: number[] = [];
+      for (let i = firstChunk; i <= lastChunk; i++) idxs.push(i);
+      requestChunks(idxs);
+    },
+    [session.durationSeconds, requestChunks, totalChunks],
+  );
+
   const handleDataZoom = useCallback(
     (params: unknown) => {
       const p = params as {
@@ -62,24 +78,11 @@ export function SessionCharts({ session }: SessionChartsProps) {
       };
       const start = p.batch?.[0]?.start ?? p.start ?? 0;
       const end = p.batch?.[0]?.end ?? p.end ?? 100;
-
       // Persist zoom so the next option rebuild preserves the current window.
       zoomRef.current = { start, end };
-
-      // datazoom start/end are percentages of the axis range [0, durationSec].
-      const durationSec = session.durationSeconds;
-      const startSec = (start / 100) * durationSec;
-      const endSec = (end / 100) * durationSec;
-
-      const firstChunk = Math.floor(startSec / CHUNK_SEC);
-      const lastChunk = Math.min(Math.floor(endSec / CHUNK_SEC), totalChunks - 1);
-      const idxs: number[] = [];
-      for (let i = firstChunk; i <= lastChunk; i++) {
-        idxs.push(i);
-      }
-      requestChunks(idxs);
+      requestWindowChunks(start, end);
     },
-    [session.durationSeconds, requestChunks, totalChunks],
+    [requestWindowChunks],
   );
 
   // Stable object — changes only when handleDataZoom changes (i.e. on session switch).
@@ -114,16 +117,15 @@ export function SessionCharts({ session }: SessionChartsProps) {
   // after warm-up): the EChart must render so datazoom can fire and load later chunks.
   const isEmpty = !isLoading && !isError && gridCount === 0 && allChunksAttempted;
 
-  // When chunk 0 yields no renderable axes (no phases, no biometrics), datazoom can never
-  // fire, so interaction-driven loading is impossible. Eagerly drain remaining chunks so
-  // allChunksAttempted can resolve and the session is confirmed empty — or data from a
-  // later chunk surfaces and the chart renders normally.
+  // Load the initially-visible window up front (the whole session at the default 0–100%
+  // zoom) instead of waiting for a datazoom interaction. Chunks still drain one at a time
+  // in the loader, so this stays within the per-chunk 413 bound while filling the chart
+  // without requiring a scroll. It also covers the "chunk 0 has no renderable data"
+  // (gridCount 0) case: every chunk gets attempted, so allChunksAttempted resolves and the
+  // empty state can settle.
   useEffect(() => {
-    if (isLoading || gridCount !== 0 || allChunksAttempted) return;
-    const remaining: number[] = [];
-    for (let i = 1; i < totalChunks; i++) remaining.push(i);
-    if (remaining.length > 0) requestChunks(remaining);
-  }, [isLoading, gridCount, allChunksAttempted, totalChunks, requestChunks]);
+    requestWindowChunks(zoomRef.current.start, zoomRef.current.end);
+  }, [requestWindowChunks]);
 
   return (
     <div className="flex h-full flex-col">
