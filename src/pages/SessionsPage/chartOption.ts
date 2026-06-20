@@ -233,9 +233,12 @@ export function buildSessionChartOption(
             gridIndex: HR_GRID,
             scale: true,
             name: 'BPM',
+            nameLocation: 'middle' as const,
+            nameGap: 40,
+            nameRotate: 90,
             nameTextStyle: { fontSize: 11, color: '#888' },
             axisLabel: { fontSize: 10, color: '#888' },
-            splitLine: { show: true, lineStyle: { color: '#f5f5f5' } },
+            splitLine: { show: false },
           },
         ]
       : []),
@@ -247,9 +250,12 @@ export function buildSessionChartOption(
             gridIndex: EEG_GRID,
             scale: true,
             name: 'μV',
+            nameLocation: 'middle' as const,
+            nameGap: 40,
+            nameRotate: 90,
             nameTextStyle: { fontSize: 11, color: '#888' },
             axisLabel: { fontSize: 10, color: '#888' },
-            splitLine: { show: true, lineStyle: { color: '#f5f5f5' } },
+            splitLine: { show: false },
           },
         ]
       : []),
@@ -261,9 +267,12 @@ export function buildSessionChartOption(
             gridIndex: EMOT_GRID,
             scale: true,
             name: 'Score',
+            nameLocation: 'middle' as const,
+            nameGap: 40,
+            nameRotate: 90,
             nameTextStyle: { fontSize: 11, color: '#888' },
             axisLabel: { fontSize: 10, color: '#888' },
-            splitLine: { show: true, lineStyle: { color: '#f5f5f5' } },
+            splitLine: { show: false },
           },
         ]
       : []),
@@ -275,9 +284,12 @@ export function buildSessionChartOption(
             gridIndex: MOTION_GRID,
             scale: true,
             name: 'm/s²·rad/s',
+            nameLocation: 'middle' as const,
+            nameGap: 40,
+            nameRotate: 90,
             nameTextStyle: { fontSize: 11, color: '#888' },
             axisLabel: { fontSize: 10, color: '#888' },
-            splitLine: { show: true, lineStyle: { color: '#f5f5f5' } },
+            splitLine: { show: false },
           },
         ]
       : []),
@@ -388,13 +400,10 @@ export function buildSessionChartOption(
   const option: EChartsOption = {
     tooltip: {
       trigger: 'axis',
-      axisPointer: {
-        type: 'cross',
-        link: [{ xAxisIndex: 'all' }],
-      },
-    },
-    axisPointer: {
-      link: [{ xAxisIndex: 'all' }],
+      // Per-grid tooltip: with no axisPointer link, hovering a grid shows only that
+      // grid's series instead of every series stacked across all grids. Zoom stays
+      // synced via the dataZoom (`xAxisIndex: 'all'`), which is independent of this.
+      axisPointer: { type: 'cross' },
     },
     grid: grids,
     xAxis: xAxes,
