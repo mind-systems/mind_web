@@ -54,6 +54,7 @@ function buildLineSeriesEntry(
     data,
     smooth: false,
     symbol: 'none',
+    sampling: 'minmax' as const,
     name,
     lineStyle: { color, width: 1.5 },
     itemStyle: { color },
