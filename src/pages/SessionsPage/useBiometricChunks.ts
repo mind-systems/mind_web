@@ -44,10 +44,11 @@ interface UseBiometricChunksResult {
 }
 
 /**
- * Fetches biometric data for a session in sequential 30-second chunks.
- * Chunk 0 is loaded on mount; additional chunks are fetched on demand via
- * `requestChunks`. Deduplication is handled entirely in refs so `requestChunks`
- * has a stable identity across chunk loads.
+ * Fetches biometric data for a session in sequential 30-second chunks on demand.
+ * Chunks load only when `requestChunks` is called — there is no automatic load on
+ * mount or session switch. Callers drive loading by enqueuing specific chunk indices.
+ * Deduplication is handled entirely in refs so `requestChunks` has a stable identity
+ * across chunk loads.
  *
  * Intentionally bypasses React Query — re-selecting a session reloads its chunks
  * from scratch (no cache). Accepted trade-off given the 413 constraint that makes
@@ -162,7 +163,8 @@ export function useBiometricChunks(session: SessionRun): UseBiometricChunksResul
       });
   }, [queue, isLoading, session.id, sessionStartMs, sessionEndMs]);
 
-  // Session-switch / unmount reset — invalidates any in-flight fetch and enqueues chunk 0.
+  // Session-switch / unmount reset — invalidates any in-flight fetch and clears all state.
+  // Chunks load only on demand via requestChunks; nothing is enqueued here.
   useEffect(() => {
     // Invalidate any in-flight fetch from the previous session or render cycle.
     fetchIdRef.current++;
@@ -173,12 +175,7 @@ export function useBiometricChunks(session: SessionRun): UseBiometricChunksResul
     loadedRef.current = new Set();
     inFlightRef.current = null;
     queuedSetRef.current = new Set();
-    // Enqueue chunk 0 directly (refs just cleared, so dedup is clean).
-    // Guard against zero-duration sessions where totalChunks === 0.
-    if (totalChunks > 0) {
-      queuedSetRef.current.add(0);
-      setQueue([0]);
-    }
+    setQueue([]);
 
     return () => {
       // On session change or unmount, invalidate the currently in-flight fetch.
