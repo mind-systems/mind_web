@@ -19,6 +19,7 @@
 - MUST full-rebuild on first render and on any signature change. Grids only ever appear within a session — treat any signature delta as a full rebuild (defensive).
 - Keep zoom preservation (`zoomRef`) working on both paths; `yAxis.scale: true` auto-range still recomputes under merge.
 - The `EChart` wrapper already keys its `setOption` effect on `[option, notMerge, isDark]` (`EChart/index.tsx:47-53`), so passing a dynamic `notMerge` boolean works with no wrapper change.
+- **Lint:** the render-phase read `const notMerge = prevSignatureRef.current !== structureSignature` must carry `// eslint-disable-next-line react-hooks/refs`, mirroring the existing `zoomRef.current` read at `SessionCharts.tsx:104`. The project's `eslint-plugin-react-hooks@7` flags render-phase `ref.current` access, so `npm run lint` fails without it. Write the ref only inside `useEffect` (allowed — no disable needed). This was the single recurring gap that failed three plan-review rounds.
 
 ### Risk / ordering
 - Highest-risk of the client tasks — it touches the axis-binding invariant the full rebuild was introduced to protect. Ship **after** notes 28 and 31; if `minmax` sampling + `large`/`progressive` already make full rebuilds cheap enough, this can be deferred.

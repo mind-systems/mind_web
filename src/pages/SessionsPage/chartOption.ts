@@ -35,9 +35,11 @@ interface RenderItemAPI {
 }
 
 /**
- * Builds a line series entry. The stable `id` is informational only — the biometric
- * chart re-renders with `notMerge: true` (full rebuild) on each chunk, so components
- * are recreated fresh every render and never reconciled across merges.
+ * Builds a line series entry. The stable `id` is load-bearing for incremental merge:
+ * when `notMerge` is false (grid structure unchanged between chunks), ECharts reconciles
+ * each series by `id` and replaces its `data` in place — which is how per-chunk cost
+ * savings are achieved. The full rebuild path (notMerge: true) also uses `id` for
+ * ECharts merge, but the ids are reassigned fresh so there is no practical difference.
  */
 function buildLineSeriesEntry(
   id: string,
@@ -73,18 +75,20 @@ function buildLineSeriesEntry(
  * calls that feed the option, so `height` is always consistent with the rendered layout.
  * All X-axes are value-based and linked via dataZoom.
  *
- * Grids, axes, and series carry stable role-based `id`s, but the biometric chart renders
- * with `notMerge: true` (full rebuild per chunk), so indices are reassigned fresh on every
- * render. This is what keeps the layout correct when a sampleType first appears in a later
- * chunk (e.g. a BCI sensor that locks after warmup): incremental merge (`notMerge: false`
- * and `replaceMerge` alike) preserves each component's creation-order index and would bind
- * series to the wrong axes; a full rebuild avoids that entirely.
+ * Grids, axes, and series carry stable role-based `id`s used for ECharts merge reconciliation.
+ * The caller uses the returned `structureSignature` to decide between a full rebuild and an
+ * incremental merge on each chunk arrival: when the grid set is unchanged, `notMerge: false`
+ * lets ECharts merge each series' `data` by `id` in place, avoiding a full recreation. When a
+ * new sampleType's grid first appears (e.g. a BCI sensor that locks after warmup), the signature
+ * changes and the caller passes `notMerge: true` — a full rebuild assigns indices fresh and keeps
+ * the layout correct. Incremental merge with a stale index would bind series to the wrong axes.
+ * Series `data` is replaced wholesale on merge (already-sorted per `toSeries`), not appended.
  *
- * The optional `zoom` parameter preserves the current zoom window across each full rebuild.
- * Without it, each rebuild would re-apply `start: 0, end: 100` and snap the view to full.
+ * The optional `zoom` parameter preserves the current zoom window across both full rebuilds and
+ * incremental merges. Without it, each rebuild snaps the view back to full range (start: 0, end: 100).
  *
- * Returns `gridCount` — the number of grids that will be rendered — so callers can detect
- * when nothing is renderable (gridCount === 0) and show an empty state instead of the chart.
+ * Returns `gridCount` and `structureSignature` alongside the option. `gridCount === 0` signals
+ * nothing is renderable (show empty state). `structureSignature` drives the `notMerge` decision.
  */
 export function buildSessionChartOption(
   instructions: InstructionDto[],
@@ -92,7 +96,7 @@ export function buildSessionChartOption(
   startedAt: string,
   endedAt: string,
   zoom: { start: number; end: number } = { start: 0, end: 100 },
-): { option: EChartsOption; height: number; gridCount: number } {
+): { option: EChartsOption; height: number; gridCount: number; structureSignature: string } {
   const startMs = new Date(startedAt).getTime();
   const durationSec = (new Date(endedAt).getTime() - startMs) / 1000;
 
@@ -439,5 +443,10 @@ export function buildSessionChartOption(
     ],
   };
 
-  return { option, height, gridCount: totalGrids };
+  // Ordered, comma-joined ids of whichever grids are present — e.g. "instruction,hr,eeg,emot,motion".
+  // Depends only on which grids exist, never on per-chunk data length, so it stays stable as data
+  // accumulates and changes only when a new sampleType's grid first appears.
+  const structureSignature = gridDefs.map((d) => d.id).join(',');
+
+  return { option, height, gridCount: totalGrids, structureSignature };
 }

@@ -1,12 +1,12 @@
 import { useRef, useCallback, useMemo, useEffect } from 'react';
 
-// The biometric chart is rebuilt in full on every chunk arrival (notMerge: true).
-// Incremental merge was measured to corrupt the layout: when a sampleType first appears
-// in a later chunk (e.g. a sensor that locks after warmup), ECharts preserves each
-// component's creation-order index across both normal merge and replaceMerge, so the
-// option's numeric xAxisIndex/yAxisIndex links resolve to the wrong axes — plotting data
-// against the wrong scale. A full rebuild assigns indices fresh each render, and the
-// zoom.start/end values already encoded in the option keep the current zoom window.
+// The biometric chart uses conditional merge: a full rebuild (notMerge: true) only when the
+// set of present grids changes (structureSignature delta or first render); otherwise ECharts
+// merges each series' data by stable id (notMerge: false), which avoids recreating every grid
+// and axis on every chunk arrival. A structural change (new grid appearing — e.g. a BCI sensor
+// that locks after warmup) still forces a full rebuild to avoid the creation-order axis
+// cross-wiring that incremental merge would cause. The zoom.start/end values encoded in the
+// option keep the current zoom window across both full rebuilds and incremental merges.
 import { useQuery } from '@tanstack/react-query';
 import { EChart } from '@/components/EChart';
 import { apiFetch } from '@/core/api/client';
@@ -50,6 +50,9 @@ export function SessionCharts({ session }: SessionChartsProps) {
   // instead of snapping back to full range (start: 0, end: 100).
   const zoomRef = useRef({ start: 0, end: 100 });
 
+  // Tracks the previously-applied structure signature to detect when a new grid first appears.
+  const prevSignatureRef = useRef<string | null>(null);
+
   // Stable callback — deps do NOT include any per-chunk state (loadedChunks is
   // intentionally absent), so the callback identity does not change as chunks arrive.
   // This prevents the EChart binding effect from re-running on every chunk load.
@@ -92,7 +95,7 @@ export function SessionCharts({ session }: SessionChartsProps) {
   // height and gridCount are always derived from the same grid-presence logic as the rendered option.
   // zoomRef is read without being a dep: we want the latest zoom captured at rebuild time
   // without retriggering the memo on every zoom event.
-  const { option, height, gridCount } = useMemo(
+  const { option, height, gridCount, structureSignature } = useMemo(
     () =>
       buildSessionChartOption(
         instructionsData ?? [],
@@ -106,6 +109,11 @@ export function SessionCharts({ session }: SessionChartsProps) {
       ),
     [instructionsData, biometrics, session.startedAt, session.endedAt],
   );
+
+  // Full rebuild when the grid set changes; incremental merge otherwise.
+  // True on first render (prevSignatureRef is null) and on any structural delta (new grid appeared).
+  // eslint-disable-next-line react-hooks/refs
+  const notMerge = prevSignatureRef.current !== structureSignature;
 
   // Show skeleton until instructions have loaded AND at least the first chunk is visible.
   // Chunk errors are soft (logged, never surfaced), so isError covers instructions only.
@@ -126,6 +134,13 @@ export function SessionCharts({ session }: SessionChartsProps) {
   useEffect(() => {
     requestWindowChunks(zoomRef.current.start, zoomRef.current.end);
   }, [requestWindowChunks]);
+
+  // Write the committed signature after each render so the next render's notMerge comparison
+  // is correct. Writing in an effect (not during render) avoids the committed-render mismatch
+  // that a render-phase write would cause under React StrictMode double-invocation.
+  useEffect(() => {
+    prevSignatureRef.current = structureSignature;
+  }, [structureSignature]);
 
   return (
     <div className="flex h-full flex-col">
@@ -161,7 +176,7 @@ export function SessionCharts({ session }: SessionChartsProps) {
             <span className="text-sm text-gray-400 dark:text-gray-500">No data for this session</span>
           </div>
         ) : (
-          <EChart option={option} style={{ height, width: '100%' }} notMerge onEvents={events} />
+          <EChart option={option} style={{ height, width: '100%' }} notMerge={notMerge} onEvents={events} />
         )}
       </div>
     </div>
