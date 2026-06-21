@@ -1,39 +1,47 @@
-# Consume server-aggregated biometrics for the zoomed-out overview (client half of LOD)
+# Server-LOD client architecture — layered base ⊕ overlay (governing design for Phase 20)
 
 **Date:** 2026-06-21
-**Source:** conversation context (perf triage; option 4 web side; API/storage owner coordination)
+**Source:** conversation context — Phase 20 re-architecture after the slug-46 band-aid failure
 
 ## Key Findings
 
-- Display decimation (notes 28/31) fixes the render freeze, but the client still **fetches and accumulates every raw sample** of a long session (`useBiometricChunks` drains all chunks into one array). The raw memory/network footprint is only removed by loading a **coarse resolution when zoomed out** — served by the mind_api aggregated read (Phase 48 / api note 58).
-- **Contract is now fixed** (api note 58, confirmed against the live DB): `GET /sessions/runs/:id/biometrics?...&bucketSec=<n>`. Without `bucketSec` ⇒ raw, byte-for-byte as today (the existing chunked path is untouched). With `bucketSec` ⇒ per-bucket per-field **min+max** envelope — mutually mirrored with the client's `sampling:'minmax'` (note 28). The server aggregates schema-agnostically (`jsonb_typeof='number'`), filters garbage `timestamp=0` itself, and owns the on-the-fly-vs-rollup strategy — **none of that touches this side.**
-- **Volume is ~95 % `motion`** (816k/860k samples; worst session 389k motion points). Consequence for this side: the raw zoom-in path still returns huge point counts, so **Phase 19 display decimation is mandatory regardless of LOD** — LOD removes volume on zoom-out, Phase 19 removes it on the raw zoom-in path.
+- mind_api Phase 48 is **live and verifiable**: `GET /sessions/runs/:id/biometrics?bucketSec=<n>` → per-bucket per-field **min+max** as **synthetic `BioSampleDto[]`** (2 samples/bucket/sampleType, distinct in-bucket timestamps min<max), contract (i). Renders through the existing `byType → toSeries(field) → buildLineSeriesEntry` pipeline unchanged — purely a *data-source* concern, not a render-path one.
+- A first attempt (**slug 46**, now rolled back; impl preserved in `git stash@{0}`) bundled the whole feature into one 4-task milestone and failed code review after 3 rounds. Every finding was a band-aid — `sessionHasData` flag, `&& overview.length===0` skeleton suppression + a "bridge", `useState mode` + `useRawRef` dual-write, hand-rolled quantized fetch dedup — and ALL trace to **one** root cause:
+  - the design **conflates two different things in one mutable array**: "the session's dataset" (a property of the whole session, known at mount) vs "what's in the current zoom window" (a property of the view). `fetchAggregated` overwrote the array per sub-window, so an empty window looked like an empty session, a swap to raw blanked the chart, and so on.
+  - compounded by **derived state stored imperatively** (`mode` is a pure function of the zoom span) and **fetch identity hand-rolled** (`fetchIdRef`/`lastAggSignatureRef`) where the aggregate is small and cacheable.
+- The layered model below dissolves every band-aid **by construction**.
 
 ## Details
 
-### Response-shape decision — **(i)** synthetic `BioSampleDto[]` (this side's vote)
-- Server emits, per bucket per sampleType, **2 synthetic `BioSampleDto`**: one carrying every numeric field's **min**, one carrying every field's **max**. Rationale from the ECharts side:
-  - Reproduces exactly what `sampling:'minmax'` does on raw data → zoom-out (aggregated) and zoom-in (raw) render **identically**, same series type, same envelope semantics, no visual jump at the raw↔aggregated threshold.
-  - **Zero client churn:** the whole pipeline (`byType` partition → `toSeries(field)` → `buildLineSeriesEntry` → grids) is reused unchanged; the resolution switch becomes a *data-source* swap, not a render-path swap. Note 30's structure-signature/merge keeps working.
-  - (ii) (a distinct aggregated DTO → an area band between min/max) is cleaner visually but needs a new transform + a new series type here — not worth it for an overview mode.
-- **Requirement on the server for (i) to render correctly:** the two synthetic samples need **distinct in-bucket timestamps** and stable order (min before max, or the real sub-bucket extremum times) — e.g. min at `bucketStart`, max at `bucketStart + bucketSec/2` — so a field's two points don't collapse onto one x. Each synthetic sample must carry **all** numeric keys of its `sampleType`.
+### Architecture — four pillars
+1. **Two layers, not one array.** An immutable coarse **base** (full-session envelope, fetched once at mount, never sub-windowed, never emptied — answers "shape" + "has data") and a transient **overlay** (high-res for the *current* window — finer aggregate or raw). **Render = `detail ?? base`**; the base is always the floor, so the chart never blanks.
+2. **Resolution is derived, not stored.** `resolution = shouldUseRaw(computeSpanSec(zoom))` — a pure function of the window, recomputed each `datazoom`. No `mode` state, no `useRawRef`, no dual-write.
+3. **Aggregated fetches via React Query, keyed by `(window, bucketSec)`.** The aggregate is small and cacheable, so the 413 reason `useBiometricChunks` bypasses RQ does **not** apply here. Keys `['bio-overview', sessionId]` and `['bio-agg', sessionId, qWindow, bucketSec]` give dedup (no storm), cache (zoom-back is instant), and cancellation — replacing `fetchIdRef`, `lastAggSignatureRef`, and the manual quantization-dedup. Raw deep-zoom keeps the existing chunk loader (413 applies; its chunk-index dedup is already correct).
+4. **One discriminated-union view-state.** `deriveView(base, detail, instructions)` → `{kind:'loading'|'empty'|'error'|'ready', samples}`; the component renders off `.kind`. Emptiness, loading, and error are each defined once; error ≠ empty.
 
-### Zoom-window → `bucketSec` policy (this side owns it)
-- `spanSec = (zoom.end − zoom.start) / 100 × durationSec`.
-- **Raw ↔ aggregated threshold:** `spanSec ≤ RAW_SPAN_LIMIT` (~90 s, tunable) → use the existing raw chunked path (`useBiometricChunks`), rendered with note 28's `minmax`. Else → aggregated. Add **hysteresis** (e.g. switch to raw at 90 s, back to aggregated at ~110 s) so micro-zoom at the boundary doesn't flap between loaders.
-- **Bucket size when aggregated:** target ~1 bucket per 1–2 px → `TARGET_BUCKETS ≈ 1200`. `idealBucket = spanSec / TARGET_BUCKETS`; **snap up to a nice ladder** `[1, 2, 5, 10, 15, 30, 60, 120, 300]` s (floor 1 s). Snapping is load-bearing: it keeps `bucketSec` constant across small zoom moves so we don't refetch on every pixel, and it's server-cache-friendly. Full 30-min view → `1800/1200 ≈ 1.5 → 2 s` → ~900 buckets → ~1800 drawn points/series.
-- **On mount:** fetch the aggregated overview at the full-zoom `bucketSec` in a **single request** → instant full-session shape, no waiting for ~60 chunk drains. This is the main memory/UX win; raw chunks load lazily only on zoom-in past the threshold.
+### Band-aid → architectural replacement
+| slug-46 band-aid | replaced by |
+|---|---|
+| `sessionHasData` flag | emptiness = base query settled non-error && zero grids — base is the full-session result by construction, never sub-windowed |
+| bridge + `&& overview.length===0` skeleton suppression | `detail ?? base` — base always under the overlay |
+| empty-window unmounts chart+zoom (dead-end) | base never empties → the empty branch can't trip from a sub-window |
+| `useState mode` + `useRawRef` dual-write | `resolution = shouldUseRaw(computeSpanSec(zoom))` — derived |
+| `lastAggSignatureRef` + manual dedup + request storm | RQ `queryKey=['bio-agg', sessionId, qWindow, bucketSec]` |
+| `fetchIdRef` stale-guards (aggregated) | RQ cancellation / last-write-wins |
+| scattered `isLoading`/`isEmpty`/`isError` booleans | `deriveView()` → discriminated union |
+| soft-fail overview → "No data" | `{kind:'error'}` distinct from `{kind:'empty'}` |
 
-### Decomposition (now that the contract is fixed)
-- **(a)** Coarse full-session overview fetch + render — new single-request loader (not chunked), rendered through the existing pipeline as synthetic min/max samples.
-- **(b)** Zoom-driven resolution switch (coarse ↔ raw) — the `RAW_SPAN_LIMIT`/ladder policy above, swapping between the overview loader and `useBiometricChunks`, reusing `zoomRef` + note 30's merge.
+### Contract + volume facts (carried, still true)
+- Response shape (i): synthetic min/max `BioSampleDto[]`, distinct in-bucket timestamps min<max, every numeric key of the `sampleType` on each synthetic sample. Mirrors client `sampling:'minmax'` (note 28), so zoom-out (aggregate) and zoom-in (raw) render identically.
+- Volume ≈95 % `motion` (816k/860k; worst session 389k) → Phase 19 decimation (`minmax`/`large`/`progressive`) stays **mandatory** on the raw zoom-in path; LOD only removes volume on zoom-out.
 
-Re-run `/roadmap-decompose` to split (a)/(b) into atomic milestones once mind_api Phase 48 ships the endpoint.
-
-### Dependency
-- mind_api Phase 48 "Biometric LOD aggregated read" (api note 58). Contract-first — endpoint must ship before this is implementable.
+### Decomposition (replaces the old single milestone)
+- **M1** (note 33) — `bucketPolicy.ts`, pure resolution + window-quantization helpers.
+- **M2** (note 34) — base overview layer via React Query + unified view-state. Headline memory win; one source; converges alone.
+- **M3** (note 35) — high-res overlay (`detail ?? base`) + derived resolution switch; finer aggregate (RQ) mid-zoom, lazy raw deep-zoom.
+- Dependencies **M1 → M2 → M3**; each independently shippable and runtime-verifiable now that Phase 48 is live.
 
 ## Open Questions
 
-- `RAW_SPAN_LIMIT`, `TARGET_BUCKETS`, and the ladder are starting values — tune against the 389k-motion session once the endpoint is live.
-- **(Decided)** Response shape → **(i)** synthetic `BioSampleDto[]` (above); finalize alongside api note 58 in `/aif-plan`.
+- `RAW_SPAN_LIMIT` / `TARGET_BUCKETS` / ladder are starting values — tune against the 389k-motion session.
+- Whether raw deep-zoom also moves to React Query (keyed by chunk index) or stays on `useBiometricChunks` — default: **stay** (413 + proven dedup). Revisit only if the dual-loader seam is awkward in M3.
