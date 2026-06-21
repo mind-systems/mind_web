@@ -90,7 +90,7 @@ export function SessionList({
             />
 
             {/* Text content — pointer-events-none so clicks fall through to the Link */}
-            <div className="pointer-events-none px-4 py-3 pr-10">
+            <div className="pointer-events-none px-4 py-3">
               <div className="flex items-center gap-2">
                 <span className="min-w-0 truncate text-sm font-medium text-gray-900 dark:text-gray-100">
                   {sessionTitle(session)}
@@ -112,7 +112,10 @@ export function SessionList({
               <button
                 type="button"
                 aria-label="Delete session"
-                className="absolute right-2 top-2 z-10 rounded p-1 text-gray-400 opacity-0 transition-opacity hover:text-red-600 focus:opacity-100 group-hover:opacity-100"
+                className={[
+                  'absolute right-2 top-2 z-10 rounded p-1 text-gray-400 opacity-0 transition-opacity hover:text-red-600 focus:opacity-100 group-hover:opacity-100',
+                  isSelected ? 'bg-gray-100 dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-900',
+                ].join(' ')}
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
