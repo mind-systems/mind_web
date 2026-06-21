@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { apiFetch } from '@/core/api/client';
+import { apiFetch, ApiError } from '@/core/api/client';
 import { logger } from '@/core/observe';
 
 export function useDeleteSession(selectedId?: string) {
@@ -13,9 +13,14 @@ export function useDeleteSession(selectedId?: string) {
       queryClient.invalidateQueries({ queryKey: ['session-runs'] });
       if (id === selectedId) navigate('/sessions');
     },
-    onError: (err) =>
+    onError: (err) => {
+      if (err instanceof ApiError && err.status === 409) {
+        logger.info('Delete rejected: session is still active');
+        return;
+      }
       logger.error(
         `Failed to delete session: ${err instanceof Error ? err.message : String(err)}`,
-      ),
+      );
+    },
   });
 }
