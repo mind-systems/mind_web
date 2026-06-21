@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
-import { apiFetch } from '@/core/api/client';
+import { apiFetch, ApiError } from '@/core/api/client';
+import { useDeleteSession } from './useDeleteSession';
 import type { ListRunsResponse } from '@/core/types';
 import { PageHeader } from '@/components/PageHeader';
 import { SessionList } from './SessionList';
@@ -12,6 +13,13 @@ import type { FilterValue } from './ModuleFilter';
 export function SessionsPage() {
   const { id } = useParams<{ id?: string }>();
   const [filter, setFilter] = useState<FilterValue>('all');
+
+  const {
+    mutateAsync: deleteSession,
+    isPending: isDeleting,
+    error: deleteError,
+    reset: resetDelete,
+  } = useDeleteSession(id);
 
   const { data, isLoading, isFetchingNextPage, hasNextPage, fetchNextPage } =
     useInfiniteQuery({
@@ -62,6 +70,16 @@ export function SessionsPage() {
               hasNextPage={hasNextPage}
               onLoadMore={() => fetchNextPage()}
               emptyMessage={emptyMessage}
+              onDelete={deleteSession}
+              isDeleting={isDeleting}
+              deleteError={
+                deleteError instanceof ApiError
+                  ? deleteError.message
+                  : deleteError
+                    ? 'Something went wrong'
+                    : null
+              }
+              onDeleteErrorReset={resetDelete}
             />
           </div>
         </div>
