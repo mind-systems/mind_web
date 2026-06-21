@@ -5,6 +5,35 @@ import type { SessionRun, BioSampleDto } from '@/core/types';
 
 export const CHUNK_SEC = 30;
 
+/**
+ * Merges two ascending-timestamp-sorted BioSampleDto arrays into a new sorted array.
+ * `incoming` is first sorted (it is bounded to ~CHUNK_SEC of samples, so cheap),
+ * then merged with `prev` via a standard two-pointer pass.
+ * Returns a new array — does not mutate either input.
+ */
+function mergeSortedByTimestamp(
+  prev: BioSampleDto[],
+  incoming: BioSampleDto[],
+): BioSampleDto[] {
+  const sorted = [...incoming].sort(
+    (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+  );
+
+  const result: BioSampleDto[] = [];
+  let i = 0;
+  let j = 0;
+  while (i < prev.length && j < sorted.length) {
+    if (new Date(prev[i].timestamp).getTime() <= new Date(sorted[j].timestamp).getTime()) {
+      result.push(prev[i++]);
+    } else {
+      result.push(sorted[j++]);
+    }
+  }
+  while (i < prev.length) result.push(prev[i++]);
+  while (j < sorted.length) result.push(sorted[j++]);
+  return result;
+}
+
 interface UseBiometricChunksResult {
   biometrics: BioSampleDto[];
   requestChunks: (idxs: number[]) => void;
@@ -110,7 +139,13 @@ export function useBiometricChunks(session: SessionRun): UseBiometricChunksResul
     )
       .then((data) => {
         if (fetchIdRef.current !== myFetchId) return;
-        setBiometrics((prev) => [...prev, ...data]);
+        // Merge-insert keeps `biometrics` globally sorted ascending by timestamp.
+        // This sorted-accumulation guarantee is the prerequisite for any future
+        // incremental chart update. Do NOT replace this with ECharts appendData:
+        // appendData tail-appends without sorting, so out-of-order chunk arrival
+        // (e.g. zoom-driven loading) would produce an X-axis zigzag. Merge-insert
+        // sidesteps that entirely.
+        setBiometrics((prev) => mergeSortedByTimestamp(prev, data));
         loadedRef.current.add(idx);
       })
       .catch((err: unknown) => {
