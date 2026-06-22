@@ -16,7 +16,7 @@ import type { SessionRun, InstructionDto, BioSampleDto } from '@/core/types';
 import { formatDate, formatDuration } from '@/core/format';
 import { buildSessionChartOption } from './chartOption';
 import { sessionTitle } from './sessionTitle';
-import { useBiometricOverview } from './useBiometricOverview';
+import { useBiometricWindowedBase } from './useBiometricWindowedBase';
 import { useBiometricChunks, CHUNK_SEC } from './useBiometricChunks';
 import { useBiometricAggregate } from './useBiometricAggregate';
 import { deriveView } from './deriveView';
@@ -50,9 +50,9 @@ export function SessionCharts({ session }: SessionChartsProps) {
       apiFetch<InstructionDto[]>(`/sessions/runs/${session.id}/instructions`),
   });
 
-  // M2 base layer: single full-session aggregated request via React Query.
-  // Payload is small (≈TARGET_BUCKETS buckets) so RQ cache + dedup + cancellation apply cleanly.
-  const overviewQuery = useBiometricOverview(session);
+  // Progressive windowed base: streams the full-session aggregate window-by-window so
+  // the chart opens on the first resolved window instead of waiting for the full session.
+  const baseLoader = useBiometricWindowedBase(session);
 
   // ── Overlay state (single source of truth for resolution mode) ──────────────────────────
   const [overlay, setOverlay] = useState<Overlay>(null);
@@ -171,7 +171,7 @@ export function SessionCharts({ session }: SessionChartsProps) {
   //   – during raw chunk fill the chart keeps showing base until chunks arrive.
   //   – during aggregate refetch placeholderData keeps the previous overlay; if no
   //     previous overlay exists, detail is null and base renders instead.
-  const base = overviewQuery.data ?? [];
+  const base = baseLoader.samples;
   const detail: BioSampleDto[] | null =
     overlay?.kind === 'raw' && rawBiometrics.length > 0
       ? rawBiometrics
@@ -207,9 +207,18 @@ export function SessionCharts({ session }: SessionChartsProps) {
     }
   }, [instructionsQuery.isError]);
 
-  // deriveView stays base-driven: loading/error reflect overviewQuery + instructionsQuery only.
+  // deriveView is driven by loader progress: loading/error reflect windowed base + instructions.
   // Overlay failures are soft — the base keeps rendering regardless.
-  const view = deriveView(overviewQuery, instructionsQuery, gridCount);
+  const view = deriveView(
+    {
+      samples: baseLoader.samples,
+      allAttempted: baseLoader.allAttempted,
+      failedCount: baseLoader.failedCount,
+      totalWindows: baseLoader.totalWindows,
+    },
+    instructionsQuery,
+    gridCount,
+  );
 
   // Full rebuild when the grid set changes; incremental merge otherwise.
   // True on first render (prevSignatureRef is null) and on any structural delta (new grid appeared).
@@ -239,7 +248,7 @@ export function SessionCharts({ session }: SessionChartsProps) {
           </span>
         )}
         {/* Subtle indicator while base, aggregate overlay, or raw chunks are in-flight */}
-        {(overviewQuery.isFetching || aggQuery.isFetching || chunksLoading) && (
+        {(baseLoader.isLoading || aggQuery.isFetching || chunksLoading) && (
           <span className="shrink-0 text-sm text-gray-400 dark:text-gray-500">Loading…</span>
         )}
       </div>

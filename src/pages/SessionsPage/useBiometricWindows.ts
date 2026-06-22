@@ -51,6 +51,7 @@ export interface UseBiometricWindowsResult {
   totalWindows: number;
   attemptedCount: number;
   allAttempted: boolean;
+  failedCount: number;
 }
 
 /**
@@ -77,6 +78,7 @@ export function useBiometricWindows(
   const [queue, setQueue] = useState<number[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [attemptedCount, setAttemptedCount] = useState(0);
+  const [failedCount, setFailedCount] = useState(0);
 
   // Dedup refs — stable identities, never trigger re-renders.
   // loadedRef: windows fetched OR permanently failed (attempted). inFlightRef: window
@@ -138,6 +140,8 @@ export function useBiometricWindows(
 
     // Skip degenerate window — can occur when durationSeconds > (endedAt - startedAt) / 1000
     // due to rounding or data drift, causing the last window's fromMs to exceed sessionEndMs.
+    // Not a failure — no data to fetch. Intentionally does NOT increment failedCount
+    // (unlike the .catch path), so callers can distinguish empty sessions from all-failed ones.
     if (fromMs >= toMs) {
       loadedRef.current.add(idx);
       inFlightRef.current = null;
@@ -163,6 +167,7 @@ export function useBiometricWindows(
         // Soft error: mark as attempted so the drain loop does not retry forever.
         logger.error(`Failed to load biometric window ${idx} for session ${session.id}`, { err });
         loadedRef.current.add(idx);
+        setFailedCount((c) => c + 1);
       })
       .finally(() => {
         if (fetchIdRef.current !== myFetchId) return;
@@ -183,6 +188,7 @@ export function useBiometricWindows(
     setSamples([]);
     setIsLoading(false);
     setAttemptedCount(0);
+    setFailedCount(0);
     loadedRef.current = new Set();
     inFlightRef.current = null;
     queuedSetRef.current = new Set();
@@ -195,5 +201,5 @@ export function useBiometricWindows(
     };
   }, [session.id, totalWindows]);
 
-  return { samples, requestWindows, isLoading, totalWindows, attemptedCount, allAttempted: attemptedCount >= totalWindows };
+  return { samples, requestWindows, isLoading, totalWindows, attemptedCount, failedCount, allAttempted: attemptedCount >= totalWindows };
 }
