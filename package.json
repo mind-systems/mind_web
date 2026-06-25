@@ -16,7 +16,7 @@
   "dependencies": {
     "@tanstack/react-query": "^5.100.14",
     "echarts": "^6.1.0",
-    "observe-js": "git+https://github.com/mind-systems/observe-js.git#v0.1.0",
+    "observe-js": "git+https://github.com/mind-systems/observe-js.git#v0.2.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-router-dom": "^7.16.0"
