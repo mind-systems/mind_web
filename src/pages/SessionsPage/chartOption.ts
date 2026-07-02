@@ -1,5 +1,6 @@
 import type { EChartsOption } from 'echarts';
 import type { InstructionDto, BioSampleDto } from '@/core/types';
+import { formatAxisDuration } from '@/core/format';
 import { parsePhases, toSeries } from './transforms';
 
 export const PHASE_COLORS: Record<string, string> = {
@@ -212,11 +213,12 @@ export function buildSessionChartOption(
     max: durationSec,
     axisLabel: {
       show: i === totalGrids - 1,
-      formatter: (v: number) => `${Math.round(v)}s`,
+      formatter: (v: number) => formatAxisDuration(v),
     },
     axisLine: { show: true, lineStyle: { color: '#e0e0e0' } },
     axisTick: { show: i === totalGrids - 1 },
     splitLine: { show: false },
+    axisPointer: { label: { formatter: (params: { value: unknown }) => formatAxisDuration(Number(params.value)) } },
   }));
 
   // --- Y-axes (1:1 correspondence with grids) ---
