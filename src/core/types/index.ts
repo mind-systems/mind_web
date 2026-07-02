@@ -8,7 +8,7 @@ export interface AuthResponse {
   user: User;
 }
 
-export type ActivityType = 'breath' | 'meditation';
+export type ActivityType = 'breath' | 'meditation' | 'root';
 
 export interface SessionRun {
   id: string;

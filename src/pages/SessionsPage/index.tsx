@@ -34,7 +34,9 @@ export function SessionsPage() {
       },
     });
 
-  const sessions = data?.pages.flatMap((p) => p.items) ?? [];
+  const sessions = (data?.pages.flatMap((p) => p.items) ?? []).filter(
+    (s) => s.activityType !== 'root',
+  );
 
   const visibleSessions =
     filter === 'all' ? sessions : sessions.filter((s) => s.activityType === filter);
