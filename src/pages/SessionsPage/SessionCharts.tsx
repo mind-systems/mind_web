@@ -4,6 +4,7 @@ import type { SessionRun } from '@/core/types';
 import { formatDate, formatDuration } from '@/core/format';
 import { sessionTitle } from './sessionTitle';
 import { VariantSelector } from './VariantSelector';
+import { PeriodInput } from './PeriodInput';
 import { CHART_VARIANTS, DEFAULT_VARIANT_ID } from './chartVariants/registry';
 
 interface SessionChartsProps {
@@ -12,6 +13,9 @@ interface SessionChartsProps {
 
 export function SessionCharts({ session }: SessionChartsProps) {
   const [selectedId, setSelectedId] = useState(DEFAULT_VARIANT_ID);
+  // null = Auto (computeBucketSec derives the effective bucket). Intentionally not reset when
+  // switching variants — switching algorithm keeps the period. No localStorage (local UI state).
+  const [periodSec, setPeriodSec] = useState<number | null>(null);
 
   const variant = CHART_VARIANTS.find((v) => v.id === selectedId)!;
   const V = variant.Component;
@@ -32,10 +36,16 @@ export function SessionCharts({ session }: SessionChartsProps) {
           </span>
         )}
         <VariantSelector variants={CHART_VARIANTS} value={selectedId} onChange={setSelectedId} />
+        <PeriodInput
+          value={periodSec}
+          maxSec={session.durationSeconds}
+          disabled={!variant.aggregated}
+          onCommit={setPeriodSec}
+        />
       </div>
 
       {/* Body */}
-      <V session={session} key={`${session.id}:${selectedId}`} />
+      <V session={session} bucketSec={periodSec} key={`${session.id}:${selectedId}:${periodSec ?? 'auto'}`} />
     </div>
   );
 }

@@ -1,4 +1,3 @@
-import { computeBucketSec } from '../bucketPolicy';
 import { makeWindowedVariant } from './makeWindowedVariant';
 import type { ChartVariant } from './types';
 
@@ -9,6 +8,7 @@ function enc(ms: number): string {
 const rawVariant = makeWindowedVariant({
   id: 'raw',
   label: 'Raw',
+  aggregated: false,
   windowSec: () => 30,
   buildPath: (session) => (fromMs, toMs) =>
     `/sessions/runs/${session.id}/biometrics?from=${enc(fromMs)}&to=${enc(toMs)}`,
@@ -17,15 +17,16 @@ const rawVariant = makeWindowedVariant({
 const minmaxVariant = makeWindowedVariant({
   id: 'minmax',
   label: 'Min/max',
-  windowSec: (session) => {
-    const bucketSec = computeBucketSec(session.durationSeconds);
+  aggregated: true,
+  windowSec: (session, effBucketSec) => {
+    const bucketSec = effBucketSec as number;
     // Target ~8 windows: snap ceil(durationSeconds / 8) up to the nearest multiple of
     // bucketSec so window edges sit on the bucket ladder (no window narrower than one bucket).
     const raw = Math.ceil(session.durationSeconds / 8);
     return Math.max(Math.ceil(raw / bucketSec) * bucketSec, bucketSec);
   },
-  buildPath: (session) => {
-    const bucketSec = computeBucketSec(session.durationSeconds);
+  buildPath: (session, effBucketSec) => {
+    const bucketSec = effBucketSec as number;
     const sessionEndMs = new Date(session.endedAt).getTime();
     // Quantizes raw [fromMs, toMs] ranges onto the absolute bucket grid:
     // - floor interior boundaries so window i's qTo equals window i+1's qFrom

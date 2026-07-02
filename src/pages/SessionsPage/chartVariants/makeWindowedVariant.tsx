@@ -3,6 +3,7 @@ import type { SessionRun, InstructionDto } from '@/core/types';
 import { useBiometricWindows } from '../useBiometricWindows';
 import { useChartInstructions } from '../useChartInstructions';
 import { BiometricEChartBody } from '../BiometricEChartBody';
+import { computeBucketSec } from '../bucketPolicy';
 import type { ChartVariant } from './types';
 
 // Stable empty-array reference so the `instructions` prop does not change identity on every
@@ -13,8 +14,13 @@ const EMPTY_INSTRUCTIONS: InstructionDto[] = [];
 export interface WindowedVariantConfig {
   id: string;
   label: string;
-  windowSec: (session: SessionRun) => number;
-  buildPath: (session: SessionRun) => (fromMs: number, toMs: number) => string;
+  /** Whether this variant honors the shared period control. Raw is not aggregated. */
+  aggregated: boolean;
+  windowSec: (session: SessionRun, effBucketSec: number | null) => number;
+  buildPath: (
+    session: SessionRun,
+    effBucketSec: number | null,
+  ) => (fromMs: number, toMs: number) => string;
 }
 
 /**
@@ -23,15 +29,25 @@ export interface WindowedVariantConfig {
  * and zoom-window ref — remounted whole whenever the radio selection changes.
  */
 export function makeWindowedVariant(config: WindowedVariantConfig): ChartVariant {
-  function Component({ session }: { session: SessionRun }) {
-    // Remount-on-switch (SessionCharts keys on `${session.id}:${selectedId}`) guarantees a
-    // stable `session` identity within a mount, so these are effectively computed once.
-    const windowSec = useMemo(() => config.windowSec(session), [session]);
+  function Component({ session, bucketSec }: { session: SessionRun; bucketSec: number | null }) {
+    // Auto (`bucketSec == null`) falls back to the duration-derived default; non-aggregated
+    // (raw) variants ignore the period control entirely and always resolve to `null`.
+    const effBucketSec = config.aggregated
+      ? (bucketSec ?? computeBucketSec(session.durationSeconds))
+      : null;
+
+    // Remount-on-switch (SessionCharts keys on `${session.id}:${selectedId}:${periodSec}`)
+    // guarantees a stable `session`/`effBucketSec` identity within a mount, so these are
+    // effectively computed once.
+    const windowSec = useMemo(() => config.windowSec(session, effBucketSec), [session, effBucketSec]);
     // windowSec is listed as a dep even though the callback body doesn't read it directly —
     // buildPath is derived from the same session-scoped inputs as windowSec, so recomputation
     // should track it even though both are effectively stable per mount.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    const buildPath = useMemo(() => config.buildPath(session), [session, windowSec]);
+    const buildPath = useMemo(
+      () => config.buildPath(session, effBucketSec),
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      [session, effBucketSec, windowSec],
+    );
 
     const loader = useBiometricWindows(session, { windowSec, buildPath });
 
@@ -84,5 +100,5 @@ export function makeWindowedVariant(config: WindowedVariantConfig): ChartVariant
 
   Component.displayName = `ChartVariant(${config.id})`;
 
-  return { id: config.id, label: config.label, Component };
+  return { id: config.id, label: config.label, aggregated: config.aggregated, Component };
 }
