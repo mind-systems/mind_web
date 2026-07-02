@@ -7,9 +7,10 @@ interface EChartProps {
   style?: React.CSSProperties;
   notMerge?: boolean;
   onEvents?: Record<string, (params: unknown) => void>;
+  xAxisInterval?: number;
 }
 
-export function EChart({ option, style, notMerge, onEvents }: EChartProps) {
+export function EChart({ option, style, notMerge, onEvents, xAxisInterval }: EChartProps) {
   const divRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<echarts.ECharts | null>(null);
   const [isDark, setIsDark] = useState(
@@ -51,6 +52,26 @@ export function EChart({ option, style, notMerge, onEvents }: EChartProps) {
       notMerge ?? false,
     );
   }, [option, notMerge, isDark]);
+
+  // Keyed on xAxisInterval/isDark — a targeted axis-only merge that runs after the option
+  // effect. This touches only xAxis.interval (series/grids/yAxis/dataZoom stay untouched),
+  // so a zoom-driven interval change is a cheap setOption merge instead of a full rebuild.
+  // Keying on isDark re-applies after a theme-driven canvas recreate.
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart || xAxisInterval == null) return;
+    // Axis count read from the `option` prop closure, not `chart.getOption()` — the latter
+    // deep-clones the entire maintained option, including every series' data array, just to
+    // read a length. `option.xAxis` is intentionally excluded from the deps below: the effect
+    // must fire only on xAxisInterval/isDark, not on every option change (that would defeat
+    // the point of the targeted merge).
+    const count = Array.isArray(option.xAxis) ? option.xAxis.length : 1;
+    chart.setOption(
+      { xAxis: Array.from({ length: count }, () => ({ interval: xAxisInterval })) },
+      false,
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [xAxisInterval, isDark]);
 
   // Keyed on onEvents/isDark — runs after the init effect so freshly created charts
   // (e.g. after a theme switch) get their handlers re-bound. Uses off-before-on to

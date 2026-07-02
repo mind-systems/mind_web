@@ -88,6 +88,9 @@ function buildLineSeriesEntry(
  * The optional `zoom` parameter preserves the current zoom window across both full rebuilds and
  * incremental merges. Without it, each rebuild snaps the view back to full range (start: 0, end: 100).
  *
+ * The optional `xAxisInterval` parameter mirrors `zoom`: it preserves the zoom-derived tick
+ * granularity across rebuilds/merges. Without it, ECharts falls back to its auto tick interval.
+ *
  * Returns `gridCount` and `structureSignature` alongside the option. `gridCount === 0` signals
  * nothing is renderable (show empty state). `structureSignature` drives the `notMerge` decision.
  */
@@ -97,6 +100,7 @@ export function buildSessionChartOption(
   startedAt: string,
   endedAt: string,
   zoom: { start: number; end: number } = { start: 0, end: 100 },
+  xAxisInterval?: number,
 ): { option: EChartsOption; height: number; gridCount: number; structureSignature: string } {
   const startMs = new Date(startedAt).getTime();
   const durationSec = (new Date(endedAt).getTime() - startMs) / 1000;
@@ -211,6 +215,7 @@ export function buildSessionChartOption(
     gridIndex: i,
     min: 0,
     max: durationSec,
+    ...(Number.isFinite(xAxisInterval) ? { interval: xAxisInterval } : {}),
     axisLabel: {
       show: i === totalGrids - 1,
       formatter: (v: number) => formatAxisDuration(v),
