@@ -39,14 +39,14 @@ export function buildCalibrationChartOption(records: NfbCalibrationRecord[]): EC
     ...pointStyle(r),
   }));
 
-  const powerData = records.map((r) => ({
-    value: r.individualPeakFrequencyPower,
+  const peakFreqData = records.map((r) => ({
+    value: r.individualPeakFrequency,
     ...pointStyle(r),
   }));
 
   const option: EChartsOption = {
     legend: {
-      data: ['Individual Frequency (Hz)', 'Peak Power'],
+      data: ['Individual Frequency (Hz)', 'Peak Frequency (Hz)'],
       top: 8,
       left: 'center',
       textStyle: { fontSize: 12, color: '#555' },
@@ -67,8 +67,9 @@ export function buildCalibrationChartOption(records: NfbCalibrationRecord[]): EC
 
         const lines = paramsArr
           .map((p) => {
-            const item = p as { seriesName: string; value: number; marker: string };
-            return `${item.marker} ${item.seriesName}: <b>${item.value.toFixed(2)}</b>`;
+            const item = p as { seriesName: string; value: number | null; marker: string };
+            const valueText = item.value == null ? '—' : item.value.toFixed(2);
+            return `${item.marker} ${item.seriesName}: <b>${valueText}</b>`;
           })
           .join('<br/>');
 
@@ -91,22 +92,13 @@ export function buildCalibrationChartOption(records: NfbCalibrationRecord[]): EC
       },
       axisLine: { lineStyle: { color: '#e0e0e0' } },
     },
-    yAxis: [
-      {
-        type: 'value',
-        name: 'Hz',
-        nameTextStyle: { fontSize: 11, color: '#888' },
-        axisLabel: { fontSize: 10, color: '#888' },
-        splitLine: { lineStyle: { color: '#f5f5f5' } },
-      },
-      {
-        type: 'value',
-        name: 'Power',
-        nameTextStyle: { fontSize: 11, color: '#888' },
-        axisLabel: { fontSize: 10, color: '#888' },
-        splitLine: { show: false },
-      },
-    ],
+    yAxis: {
+      type: 'value',
+      name: 'Hz',
+      nameTextStyle: { fontSize: 11, color: '#888' },
+      axisLabel: { fontSize: 10, color: '#888' },
+      splitLine: { lineStyle: { color: '#f5f5f5' } },
+    },
     series: [
       {
         name: 'Individual Frequency (Hz)',
@@ -117,10 +109,9 @@ export function buildCalibrationChartOption(records: NfbCalibrationRecord[]): EC
         symbolSize: 8,
       },
       {
-        name: 'Peak Power',
+        name: 'Peak Frequency (Hz)',
         type: 'line',
-        yAxisIndex: 1,
-        data: powerData,
+        data: peakFreqData,
         lineStyle: { color: '#E89B2A', width: 2 },
         symbolSize: 8,
       },

@@ -61,6 +61,7 @@ export interface NfbCalibrationRecord {
   failReason: string | null;
   individualFrequency: number;
   individualPeakFrequencyPower: number;
+  individualPeakFrequency: number | null;
   individualPeakFrequencySuppression: number;
   individualBandwidth: number;
   individualNormalizedPower: number;
