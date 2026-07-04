@@ -49,7 +49,7 @@ JWT stored in `localStorage` under `mind_auth_token`. All API requests include `
 
 ## API
 
-`mind_api` REST endpoints. Base URL: `VITE_API_BASE_URL` env var (`.env.local` for development, gitignored). `.env.example` is committed with an empty value.
+`mind_api` REST endpoints. Base URL: `VITE_API_BASE_URL` env var (`.env.development.local` for development, gitignored). `.env.example` is committed with an empty value.
 
 ## Logging
 

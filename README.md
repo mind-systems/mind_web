@@ -11,7 +11,7 @@ npm run dev
 
 The dev server starts at `http://localhost:5173`.
 
-Before running, create `.env.local` in the project root:
+Before running, create `.env.development.local` in the project root:
 
 ```
 VITE_API_BASE_URL=http://localhost:3000

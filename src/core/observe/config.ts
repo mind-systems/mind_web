@@ -9,3 +9,6 @@ export const logToObserver = logDestination === 'grafana' || logDestination === 
 
 export const otlpEndpoint =
   (import.meta.env.VITE_OTLP_ENDPOINT as string | undefined)?.trim() || undefined;
+
+export const otlpAuthToken =
+  (import.meta.env.VITE_OTLP_AUTH_TOKEN as string | undefined)?.trim() || undefined;
