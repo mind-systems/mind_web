@@ -75,26 +75,21 @@ export function makeWindowedVariant(config: WindowedVariantConfig): ChartVariant
     }, []);
 
     return (
-      <>
-        {loader.isLoading && (
-          <span className="shrink-0 px-6 pt-2 text-sm text-gray-400 dark:text-gray-500">Loading…</span>
-        )}
-        <BiometricEChartBody
-          startedAt={session.startedAt}
-          endedAt={session.endedAt}
-          instructions={instructionsQuery.data ?? EMPTY_INSTRUCTIONS}
-          instructionsQuery={instructionsQuery}
-          samples={loader.samples}
-          baseProgress={{
-            samples: loader.samples,
-            allAttempted: loader.allAttempted,
-            failedCount: loader.failedCount,
-            totalWindows: loader.totalWindows,
-          }}
-          zoomRef={zoomRef}
-          onDataZoom={onDataZoom}
-        />
-      </>
+      <BiometricEChartBody
+        startedAt={session.startedAt}
+        endedAt={session.endedAt}
+        instructions={instructionsQuery.data ?? EMPTY_INSTRUCTIONS}
+        instructionsQuery={instructionsQuery}
+        samples={loader.samples}
+        baseProgress={{
+          samples: loader.samples,
+          allAttempted: loader.allAttempted,
+          failedCount: loader.failedCount,
+          totalWindows: loader.totalWindows,
+        }}
+        zoomRef={zoomRef}
+        onDataZoom={onDataZoom}
+      />
     );
   }
 
