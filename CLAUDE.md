@@ -57,16 +57,13 @@ JWT stored in `localStorage` under `mind_auth_token`. All API requests include `
 
 ## Rules
 
-- All files in English
 - `mind_auth_token` — do not rename this localStorage key
-- Never write to `mind_api` proto files — proto ownership is in `mind_api/proto/`
 - All HTTP calls go through `core/api/client.ts` — no raw `fetch` in pages or components
 - Browser storage (`localStorage`/`sessionStorage`) access only in `core/auth/AuthContext.tsx`, `core/api/client.ts`, and `core/auth/oauthState.ts` — no direct storage reads/writes anywhere else
 - Components receive data as props from pages — no `useQuery` inside shared components
 
 ## AI Context
 
-`.ai-factory/DESCRIPTION.md` — project overview and features
-`.ai-factory/ROADMAP.md` — six-phase implementation roadmap
+`.ai-factory/ROADMAP.md` — phased implementation roadmap
 `.ai-factory/ARCHITECTURE.md` — architecture pattern, dependency rules, code examples
 `docs/observability.md` — OTLP log destination modes, VITE_ prefix requirement, dev proxy
